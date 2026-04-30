@@ -1,0 +1,10 @@
+@inject CollectionRegistry Registry
+
+<RadzenPanelMenu>
+    <RadzenPanelMenuItem Text="Collections" Icon="folder" Expanded="true">
+        @foreach (var collection in Registry.GetAll())
+        {
+            <RadzenPanelMenuItem Text="@collection.Label" Path="@($"/admin/collections/{collection.Slug}")" />
+        }
+    </RadzenPanelMenuItem>
+</RadzenPanelMenu>

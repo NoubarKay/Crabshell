@@ -1,0 +1,145 @@
+@page "/admin/collections/{Slug}"
+@layout Crabshell.Admin.Layout.AdminLayout
+@inject CollectionRegistry Registry
+@inject ICollectionService CollectionService
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<!-- HEADER -->
+<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px">
+    <div>
+        <RadzenText TextStyle="TextStyle.Caption"
+                    Style="color:var(--rz-text-secondary-color);display:block;margin-bottom:4px;font-weight:500">
+            Collections
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin:0">
+            @collection?.Label
+        </RadzenText>
+    </div>
+    <RadzenButton Text="@($"New {collection?.Label}")"
+                  ButtonStyle="ButtonStyle.Primary"
+                  Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}/new"))" />
+</div>
+
+@if (collection is not null)
+{
+    <RadzenCard Style="padding:0;overflow:hidden">
+        <RadzenDataGrid Data="@filteredDocuments" TItem="CrabshellDocument" AllowSorting="true" AllowFiltering="true"
+                        Style="border:none">
+                <Columns>
+                    @foreach (var field in collection.Fields
+                                  .Where(f => f.GridVisible)
+                                  .OrderBy(f => f.GridOrder))
+                    {
+                        var f = field;
+                        <RadzenDataGridColumn TItem="CrabshellDocument"
+                                              Title="@f.Label"
+                                              Width="@(f.GridWidth > 0 ? $"{f.GridWidth}px" : "")"
+                                              Sortable="@f.GridSortable"
+                                              Filterable="@f.GridFilterable">
+                            <Template Context="doc">
+                                @GetDisplayValue(doc, f)
+                            </Template>
+                            <FilterTemplate Context="col">
+                                <RadzenTextBox Value="@(GetFilterValue(f.PropertyName))"
+                                               ValueChanged="@(v => ApplyFilter(f.PropertyName, v))"
+                                               Style="width:100%" />
+                            </FilterTemplate>
+                        </RadzenDataGridColumn>
+                    }
+                    <RadzenDataGridColumn TItem="CrabshellDocument" Title="" Width="150px" Sortable="false">
+                        <Template Context="doc">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0px">
+                                <RadzenButton Text="Edit"
+                                              ButtonStyle="ButtonStyle.Primary"
+                                              Variant="Variant.Text"
+                                              Size="ButtonSize.Small"
+                                              Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}/{doc.Id}"))" />
+                                <RadzenButton Text="Delete"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Variant="Variant.Text"
+                                              Size="ButtonSize.Small"
+                                              Click="@(() => Delete(doc))" />
+                            </RadzenStack>
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+    </RadzenCard>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = default!;
+    private List<CrabshellDocument> documents = [];
+    private List<CrabshellDocument> filteredDocuments = [];
+    private CollectionMeta? collection;
+    private Dictionary<string, List<CrabshellDocument>> relatedDocuments = new();
+    private Dictionary<string, string> filters = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        collection = Registry.Get(Slug);
+        if (collection is null) return;
+
+        documents = await CollectionService.GetAllAsync(Slug);
+        filters = new();
+        filteredDocuments = documents;
+
+        relatedDocuments = new();
+        foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship && f.GridVisible))
+        {
+            if (field.RelationshipSettings is null) continue;
+            relatedDocuments[field.PropertyName] = await CollectionService.GetAllAsync(field.RelationshipSettings.Slug);
+        }
+    }
+
+    private string GetDisplayValue(CrabshellDocument doc, FieldMeta field)
+    {
+        if (field.FieldType != FieldType.Relationship)
+            return field.Getter(doc)?.ToString() ?? "";
+
+        if (field.RelationshipSettings is null)
+            return field.Getter(doc)?.ToString() ?? "";
+
+        var rawValue = field.Getter(doc)?.ToString();
+        if (rawValue is null) return "";
+
+        if (!relatedDocuments.TryGetValue(field.PropertyName, out var docs))
+            return rawValue;
+
+        var relatedDoc = docs.FirstOrDefault(d => d.Id.ToString() == rawValue);
+        if (relatedDoc is null) return rawValue;
+
+        var relatedMeta = Registry.Get(field.RelationshipSettings.Slug);
+        var firstTextField = relatedMeta?.Fields.FirstOrDefault(f => f.FieldType == FieldType.Text);
+        return firstTextField?.Getter(relatedDoc)?.ToString() ?? rawValue;
+    }
+
+    private string GetFilterValue(string propertyName) =>
+        filters.TryGetValue(propertyName, out var v) ? v : "";
+
+    private void ApplyFilter(string propertyName, string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            filters.Remove(propertyName);
+        else
+            filters[propertyName] = value;
+
+        filteredDocuments = documents.Where(doc =>
+            filters.All(kvp =>
+            {
+                var field = collection!.Fields.FirstOrDefault(f => f.PropertyName == kvp.Key);
+                if (field is null) return true;
+                var display = GetDisplayValue(doc, field);
+                return display.Contains(kvp.Value, StringComparison.OrdinalIgnoreCase);
+            })
+        ).ToList();
+    }
+
+    private async Task Delete(CrabshellDocument doc)
+    {
+        await CollectionService.DeleteAsync(Slug, doc.Id);
+        documents.Remove(doc);
+        filteredDocuments = filteredDocuments.Where(d => d.Id != doc.Id).ToList();
+    }
+}

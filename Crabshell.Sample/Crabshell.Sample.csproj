@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Radzen.Blazor" Version="5.*" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Crabshell.Core\Crabshell.Core.csproj" />
+      <ProjectReference Include="..\Crabshell.Data\Crabshell.Data.csproj" />
+      <ProjectReference Include="..\Crabshell.Admin\Crabshell.Admin.csproj" />
+      <ProjectReference Include="..\Crabshell.SourceGenerator\Crabshell.SourceGenerator.csproj"
+                        OutputItemType="Analyzer"
+                        ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Collections\" />
+    </ItemGroup>
+
+</Project>

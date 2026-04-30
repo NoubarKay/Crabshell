@@ -1,0 +1,355 @@
+@page "/admin/collections/{Slug}/new"
+@page "/admin/collections/{Slug}/{Id}"
+@layout Crabshell.Admin.Layout.AdminLayout
+@inject CollectionRegistry Registry
+@inject ICollectionService CollectionService
+@inject NavigationManager Nav
+@inject NotificationService Notifications
+@rendermode InteractiveServer
+
+<!-- HEADER -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px">
+    <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <a href="/admin/collections/@Slug"
+               style="font-size:12px;color:var(--rz-text-secondary-color);text-decoration:none;font-weight:500">
+                @collection?.Label
+            </a>
+            <span style="font-size:12px;color:var(--rz-text-disabled-color)">/</span>
+            <span style="font-size:12px;color:var(--rz-text-secondary-color);font-weight:500">
+                @(isNew ? "Create" : "Edit")
+            </span>
+        </div>
+        <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin:0;line-height:1.2">
+            @(isNew ? $"New {collection?.Label}" : $"Edit {collection?.Label}")
+        </RadzenText>
+    </div>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="8px" Style="margin-top:4px">
+        <RadzenButton Text="Cancel"
+                      Variant="Variant.Text"
+                      ButtonStyle="ButtonStyle.Base"
+                      Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}"))" />
+        
+        @if (collection.SaveOption == SaveOption.Save)
+        {
+            <RadzenButton Text="Save"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Disabled="@isSaving"
+                          Click="Save" />
+        }
+        else
+        {
+            <RadzenSplitButton Click="Save" Text="Save" Disabled="@isSaving" ButtonStyle="ButtonStyle.Primary">
+                <ChildContent>
+                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndStayHere))
+                    {
+                        <RadzenSplitButtonItem Text="Save and Stay Here" Value="1" />
+                    }
+                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndClone))
+                    {
+                        <RadzenSplitButtonItem Text="Save and Clone" Value="1"/>
+                    }
+                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndGoToNext))
+                    {
+                        <RadzenSplitButtonItem Text="Save and Go to Next" Value="1"/>
+                    }
+                </ChildContent>
+            </RadzenSplitButton>
+        }
+
+    </RadzenStack>
+</div>
+
+@if (document is not null && collection is not null)
+{
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="20px" AlignItems="AlignItems.Start">
+
+        <!-- MAIN -->
+        <div style="flex:1;min-width:0">
+            <RadzenCard Style="padding:0;overflow:hidden">
+                @{
+                    var ungrouped = collection.Fields.Where(f => f.GroupSettings is null).ToList();
+                    var mainGroups = collection.Fields
+                        .Where(f => f.GroupSettings is { Sidebar: false })
+                        .GroupBy(f => f.GroupSettings!.Name).ToList();
+                }
+                @if (ungrouped.Count > 0)
+                {
+                    <div style="padding:28px">
+                        <RadzenStack Gap="20px">
+                            @foreach (var field in ungrouped)
+                            {
+                                @RenderField(field)
+                            }
+                        </RadzenStack>
+                    </div>
+                }
+                @foreach (var group in mainGroups)
+                {
+                    <div style="border-top:1px solid var(--rz-border-color);padding:28px">
+                        <RadzenText TextStyle="TextStyle.Subtitle2"
+                                    Style="font-weight:600;margin-bottom:20px;color:var(--rz-text-secondary-color);text-transform:uppercase;font-size:2rem;letter-spacing:0.06em">
+                            @group.Key
+                        </RadzenText>
+                        <RadzenStack Gap="20px">
+                            @foreach (var field in group)
+                            {
+                                @RenderField(field)
+                            }
+                        </RadzenStack>
+                    </div>
+                }
+            </RadzenCard>
+        </div>
+
+        <!-- SIDEBAR -->
+        <RadzenStack Style="width:272px;flex-shrink:0;position:sticky;top:24px" Gap="12px">
+
+            @if (validationErrors.Count > 0)
+            {
+                <RadzenCard Style="padding:0;overflow:hidden">
+                    <div style="padding:12px 16px;border-bottom:1px solid var(--rz-danger);background:var(--rz-danger-lighter)">
+                        <RadzenText TextStyle="TextStyle.Subtitle2"
+                                    Style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--rz-danger)">
+                            Errors
+                        </RadzenText>
+                    </div>
+                    <div style="padding:14px 16px">
+                        <RadzenStack Gap="6px">
+                            @foreach (var error in validationErrors)
+                            {
+                                <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-danger)">
+                                    @error.Message
+                                </RadzenText>
+                            }
+                        </RadzenStack>
+                    </div>
+                </RadzenCard>
+            }
+
+            @foreach (var group in collection.Fields
+                .Where(f => f.GroupSettings is { Sidebar: true })
+                .GroupBy(f => f.GroupSettings!.Name))
+            {
+                <RadzenCard Style="padding:0;overflow:hidden">
+                    <div style="padding:12px 16px;border-bottom:1px solid var(--rz-border-color)">
+                        <RadzenText TextStyle="TextStyle.Subtitle2"
+                                    Style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--rz-text-secondary-color)">
+                            @group.Key
+                        </RadzenText>
+                    </div>
+                    <div style="padding:14px 16px">
+                        <RadzenStack Gap="16px">
+                            @foreach (var field in group)
+                            {
+                                @RenderField(field)
+                            }
+                        </RadzenStack>
+                    </div>
+                </RadzenCard>
+            }
+
+            @if (!isNew)
+            {
+                <RadzenCard Style="padding:0;overflow:hidden">
+                    <div style="padding:12px 16px;border-bottom:1px solid var(--rz-border-color)">
+                        <RadzenText TextStyle="TextStyle.Subtitle2"
+                                    Style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--rz-text-secondary-color)">
+                            Details
+                        </RadzenText>
+                    </div>
+                    <div style="padding:14px 16px">
+                        <RadzenStack Gap="12px">
+                            <div>
+                                <RadzenText TextStyle="TextStyle.Caption"
+                                            Style="color:var(--rz-text-secondary-color);display:block;margin-bottom:2px">
+                                    Created
+                                </RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">
+                                    @document.CreatedAt.ToString("MMM d, yyyy · hh:mm tt")
+                                </RadzenText>
+                            </div>
+                            <div>
+                                <RadzenText TextStyle="TextStyle.Caption"
+                                            Style="color:var(--rz-text-secondary-color);display:block;margin-bottom:2px">
+                                    Last updated
+                                </RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">
+                                    @document.UpdatedAt.ToString("MMM d, yyyy · hh:mm tt")
+                                </RadzenText>
+                            </div>
+                        </RadzenStack>
+                    </div>
+                </RadzenCard>
+            }
+
+        </RadzenStack>
+
+    </RadzenStack>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = default!;
+    [Parameter] public string? Id { get; set; }
+
+    private CollectionMeta? collection;
+    private CrabshellDocument? document;
+    private Dictionary<string, string?> formValues = new();
+    private Dictionary<string, List<CrabshellDocument>> relatedDocuments = new();
+    private List<ValidationError> validationErrors = [];
+    private bool isSaving = false;
+    private bool isNew => Id is null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        collection = Registry.Get(Slug);
+        if (collection is null) return;
+
+        document = isNew
+            ? (CrabshellDocument)Activator.CreateInstance(collection.ClrType)!
+            : await CollectionService.GetByIdAsync(Slug, Guid.Parse(Id!));
+
+        formValues = new();
+        foreach (var field in collection.Fields)
+        {
+            var raw = field.Getter(document!);
+            formValues[field.PropertyName] = field.FieldType == FieldType.DateTime && raw is DateTime dt
+                ? dt.ToString("O")
+                : raw?.ToString();
+        }
+
+        relatedDocuments = new();
+        foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship))
+        {
+            if (field.RelationshipSettings is null) continue;
+            relatedDocuments[field.PropertyName] =
+                await CollectionService.GetAllAsync(field.RelationshipSettings.Slug);
+        }
+    }
+
+    private RenderFragment RenderField(FieldMeta field) => __builder =>
+    {
+        <RadzenStack Gap="6px">
+            @if (field.FieldType != FieldType.Bool)
+            {
+                <RadzenLabel Text="@field.Label"
+                             Style="font-size:12px;font-weight:600;color:var(--rz-text-color)" />
+            }
+            @if (field.FieldType == FieldType.Text)
+            {
+                <RadzenTextBox @bind-Value="formValues[field.PropertyName]"
+                               Style="width:100%" />
+            }
+            else if (field.FieldType == FieldType.Select)
+            {
+                <RadzenDropDown @bind-Value="formValues[field.PropertyName]"
+                                Data="@field.SelectSettings?.Options"
+                                Style="width:100%" />
+            }
+            else if (field.FieldType == FieldType.Relationship)
+            {
+                var items = BuildRelationshipItems(field);
+                <RadzenDropDown @bind-Value="formValues[field.PropertyName]"
+                                Data="@items"
+                                TextProperty="Text"
+                                ValueProperty="Value"
+                                AllowFiltering="true"
+                                Style="width:100%" />
+            }
+            else if (field.FieldType == FieldType.DateTime)
+            {
+                var ds = field.DateTimeSettings!;
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
+                    <RadzenDatePicker TValue="DateTime?"
+                                      Value="@(DateTime.TryParse(formValues[field.PropertyName], out var dt) ? dt : null)"
+                                      ValueChanged="@((DateTime? v) => formValues[field.PropertyName] = v?.ToString())"
+                                      ShowTime="@ds.HasTime"
+                                      TimeOnly="@ds.TimeOnly"
+                                      HoursStep="@ds.HoursStep.ToString()"
+                                      MinutesStep="@ds.MinutesStep.ToString()"
+                                      ShowSeconds="@(ds.SecondsStep > 0)"
+                                      SecondsStep="@ds.SecondsStep.ToString()"
+                                      Inline="@ds.Inline"
+                                      ShowButton="@ds.ShowButton"
+                                      ImmediateValue="@ds.Immediate"
+                                      YearRange="@ds.YearRange"
+                                      DateFormat="@(ds.DateFormat ?? (ds.HasTime ? "MM/dd/yyyy HH:mm" : "MM/dd/yyyy"))"
+                                      Style="width:100%" />
+                    @if (ds.ShowNowButton)
+                    {
+                        <RadzenButton Text="Now" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                                      Click="@(() => formValues[field.PropertyName] = DateTime.UtcNow.ToString("O"))" />
+                    }
+                </RadzenStack>
+            }
+            else if (field.FieldType == FieldType.Bool)
+            {
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
+                    @if (field.BoolSettings?.IsSwitch == true)
+                    {
+                        <RadzenSwitch Value="@(formValues[field.PropertyName]?.ToLower() == "true")" ValueChanged="@((bool v) => formValues[field.PropertyName] = v.ToString().ToLower())" />
+                    }
+                    else
+                    {
+                        <RadzenCheckBox Value="@(formValues[field.PropertyName]?.ToLower() == "true")"
+                                        ValueChanged="@((bool v) => formValues[field.PropertyName] = v.ToString().ToLower())"/>
+                    }
+                    <RadzenLabel Text="@field.Label"
+                                 Style="font-size:12px;font-weight:600;color:var(--rz-text-color);margin:0"/>
+                </RadzenStack>
+            }
+            else if (field.FieldType == FieldType.Number)
+            {
+                var ns = field.NumberSettings!;
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="4px">
+                    <RadzenNumeric TValue="decimal?"
+                                   Value="@(decimal.TryParse(formValues[field.PropertyName], out var n) ? n : null)"
+                                   ValueChanged="@((decimal? v) => formValues[field.PropertyName] = v?.ToString())"
+                                   Min="@ns.Min"
+                                   Max="@ns.Max"
+                                   Step="@(ns.Step)"
+                                   Format="@(ns.Format)"
+                                   Style="width:100%" />
+                    @if (ns.Suffix is not null)
+                    {
+                        <RadzenLabel Text="@ns.Suffix" Style="font-size:14px;color:var(--rz-text-secondary-color)" />
+                    }
+                </RadzenStack>
+            }
+        </RadzenStack>;
+    };
+
+    private record DropDownItem(string Value, string Text);
+
+    private List<DropDownItem> BuildRelationshipItems(FieldMeta field)
+    {
+        var docs = relatedDocuments.GetValueOrDefault(field.PropertyName) ?? [];
+        var relatedMeta = field.RelationshipSettings is not null
+            ? Registry.Get(field.RelationshipSettings.Slug)
+            : null;
+        var firstTextField = relatedMeta?.Fields
+            .FirstOrDefault(f => f.FieldType == FieldType.Text);
+
+        return docs.Select(doc => new DropDownItem(
+            Value: doc.Id.ToString(),
+            Text: firstTextField?.Getter(doc)?.ToString() ?? doc.Id.ToString()
+        )).ToList();
+    }
+
+    private async Task Save()
+    {
+        isSaving = true;
+
+        validationErrors = isNew
+            ? await CollectionService.CreateAsync(Slug, formValues)
+            : await CollectionService.UpdateAsync(Slug, Guid.Parse(Id!), formValues);
+
+        isSaving = false;
+
+        if (validationErrors.Count == 0)
+        {
+            Notifications.Notify(NotificationSeverity.Success, "Saved", duration: 3000);
+            Nav.NavigateTo($"/admin/collections/{Slug}");
+        }
+    }
+}

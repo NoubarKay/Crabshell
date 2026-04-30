@@ -1,0 +1,29 @@
+@page "/admin"
+@layout Crabshell.Admin.Layout.AdminLayout
+@inject CollectionRegistry Registry
+@rendermode InteractiveServer
+
+<div style="margin-bottom:28px">
+    <RadzenText TextStyle="TextStyle.Caption"
+                Style="color:var(--rz-text-secondary-color);display:block;margin-bottom:4px;font-weight:500">
+        Admin
+    </RadzenText>
+    <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin:0">Dashboard</RadzenText>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+    @foreach (var collection in Registry.GetAll())
+    {
+        <a href="/admin/collections/@collection.Slug" style="text-decoration:none;display:block">
+            <RadzenCard Style="cursor:pointer;padding:20px;transition:box-shadow 0.15s">
+                <RadzenText TextStyle="TextStyle.Subtitle1" Style="font-weight:600;margin-bottom:4px">
+                    @collection.Label
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption"
+                            Style="color:var(--rz-text-secondary-color);font-family:monospace">
+                    @collection.Slug
+                </RadzenText>
+            </RadzenCard>
+        </a>
+    }
+</div>
