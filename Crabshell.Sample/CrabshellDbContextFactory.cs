@@ -13,7 +13,7 @@ public class CrabshellDbContextFactory : IDesignTimeDbContextFactory<CrabshellDb
         registry.Register(typeof(CrabshellDbContextFactory).Assembly);
 
         var options = new DbContextOptionsBuilder<CrabshellDbContext>()
-            .UseNpgsql("Host=localhost;Database=crabshell-test;Username=postgres;Password=123123123")
+            .UseNpgsql("Host=db;Database=crabshell-test;Username=postgres;Password=123123123")
             .UseSnakeCaseNamingConvention()
             .Options;
 
