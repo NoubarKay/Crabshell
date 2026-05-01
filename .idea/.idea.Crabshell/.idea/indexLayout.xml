@@ -5,6 +5,7 @@
     <explicitIncludes>
       <Path>Crabshell.Admin</Path>
       <Path>Crabshell.Admin/Crabshell.Admin.csproj</Path>
+      <Path>Crabshell.Analyzers/Rules</Path>
     </explicitIncludes>
     <explicitExcludes />
   </component>

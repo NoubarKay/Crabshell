@@ -19,6 +19,9 @@
       <ProjectReference Include="..\Crabshell.SourceGenerator\Crabshell.SourceGenerator.csproj"
                         OutputItemType="Analyzer"
                         ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\Crabshell.Analyzers\Crabshell.Analyzers.csproj"
+                        OutputItemType="Analyzer"
+                        ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>

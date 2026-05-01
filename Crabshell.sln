@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		compose.yaml = compose.yaml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crabshell.Analyzers", "Crabshell.Analyzers\Crabshell.Analyzers.csproj", "{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,18 @@ Global
 		{80AA36EE-B1F9-4DEB-B99A-E986AF6D2336}.Release|x64.Build.0 = Release|Any CPU
 		{80AA36EE-B1F9-4DEB-B99A-E986AF6D2336}.Release|x86.ActiveCfg = Release|Any CPU
 		{80AA36EE-B1F9-4DEB-B99A-E986AF6D2336}.Release|x86.Build.0 = Release|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Debug|x64.Build.0 = Debug|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Debug|x86.Build.0 = Debug|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Release|Any CPU.Build.0 = Release|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Release|x64.ActiveCfg = Release|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Release|x64.Build.0 = Release|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Release|x86.ActiveCfg = Release|Any CPU
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -95,5 +109,6 @@ Global
 		{F167621F-20CD-40D2-93AD-CD15D0714196} = {E3A0ECE7-DA19-48E1-B0B0-0D58EDEFAC05}
 		{1D4A7B54-2749-4A63-B3CE-AFF66E991E93} = {E3A0ECE7-DA19-48E1-B0B0-0D58EDEFAC05}
 		{BF25513F-6CD2-4DF6-A802-E12CECBB40D3} = {E3A0ECE7-DA19-48E1-B0B0-0D58EDEFAC05}
+		{658EF3FA-22E1-4CA4-9A75-B6589D6BF741} = {E3A0ECE7-DA19-48E1-B0B0-0D58EDEFAC05}
 	EndGlobalSection
 EndGlobal
