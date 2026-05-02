@@ -19,6 +19,8 @@ public sealed class CollectionAttribute : Attribute
     public string? Label { get; set; }
     
     public SaveOption SaveOptions { get; set; } = SaveOption.Save;
+
+    public Type[] CustomSaveOptions { get; set; } = [];
  
     public CollectionAttribute(string slug)
     {

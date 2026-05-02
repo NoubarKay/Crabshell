@@ -21,22 +21,22 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
     }
 
 
-    public async Task<List<ValidationError>> CreateAsync(string slug, Dictionary<string, string?> formValues)
+    public async Task<(Guid Id, List<ValidationError> Errors)> CreateAsync(string slug, Dictionary<string, string?> formValues)
     {
         var collection = registry.Get(slug);
-        if (collection is null) return [];
+        if (collection is null) return (Guid.Empty, []);
 
         var errors = CollectionValidator.Validate(collection, formValues);
-        if (errors.Count > 0) return errors;
+        if (errors.Count > 0) return (Guid.Empty, errors);
 
         var relationshipErrors = await ValidateRelationshipsAsync(collection, formValues);
-        if (relationshipErrors.Count > 0) return relationshipErrors;
+        if (relationshipErrors.Count > 0) return (Guid.Empty, relationshipErrors);
 
         var document = (CrabshellDocument)Activator.CreateInstance(collection.ClrType)!;
         MapFormValues(collection, document, formValues);
 
         await resolver.Resolve(collection).CreateAsync(document);
-        return [];
+        return (document.Id, []);
     }
 
     public async Task<List<ValidationError>> UpdateAsync(string slug, Guid id, Dictionary<string, string?> formValues)
@@ -69,7 +69,7 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
 
         await resolver.Resolve(collection).DeleteAsync(document);
     }
-    
+
     private async Task<List<ValidationError>> ValidateRelationshipsAsync(
         CollectionMeta collection,
         Dictionary<string, string?> formValues)
