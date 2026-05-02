@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Crabshell.Core.Attributes;
 using Crabshell.Core.Attributes.Fields;
 using Crabshell.Core.Documents;
+using Crabshell.Core.SaveActions;
 
 namespace Crabshell.Core.Registry;
 
@@ -27,6 +28,10 @@ public sealed class CollectionRegistry
             var slug = attribute?.Slug ?? type.Name;
             var label = attribute?.Label ?? type.Name;
             var saveOptions = attribute.SaveOptions;
+            
+            //Check for custom save actions
+            var customSaveActions = BuildCustomSaveActions(attribute.CustomSaveOptions, type.Name);
+
 
             if (!_safeSlug.IsMatch(slug))
                 throw new InvalidOperationException(
@@ -184,7 +189,8 @@ public sealed class CollectionRegistry
                 Label   = label,
                 ClrType = type,
                 Fields  = fieldMetas.AsReadOnly(),
-                SaveOption = saveOptions
+                SaveOption = saveOptions,
+                CustomSaveActions  = customSaveActions.AsReadOnly(),
             };
         }
     }
@@ -262,4 +268,33 @@ public sealed class CollectionRegistry
 
         return (getter, setter);
     }
+    
+    private static readonly HashSet<string> _reservedSaveValues = ["stay", "clone", "next"];
+
+    private static List<ICustomSaveAction> BuildCustomSaveActions(Type[] types, string collectionTypeName)
+    {
+        var actions = new List<ICustomSaveAction>();
+
+        foreach (var actionType in types)
+        {
+            if (!typeof(ICustomSaveAction).IsAssignableFrom(actionType))
+                throw new InvalidOperationException(
+                    $"'{actionType.Name}' on '{collectionTypeName}' must implement ICustomSaveAction.");
+
+            if (actionType.GetConstructor(Type.EmptyTypes) is null)
+                throw new InvalidOperationException(
+                    $"'{actionType.Name}' on '{collectionTypeName}' must have a public parameterless constructor.");
+
+            var instance = (ICustomSaveAction)Activator.CreateInstance(actionType)!;
+
+            if (_reservedSaveValues.Contains(instance.Value))
+                throw new InvalidOperationException(
+                    $"'{actionType.Name}' uses reserved Value '{instance.Value}'. Reserved: stay, clone, next.");
+
+            actions.Add(instance);
+        }
+
+        return actions;
+    }
+
 }

@@ -1,11 +1,16 @@
 @page "/admin/collections/{Slug}/new"
 @page "/admin/collections/{Slug}/{Id}"
+@using Crabshell.Core.SaveActions
 @layout Crabshell.Admin.Layout.AdminLayout
 @inject CollectionRegistry Registry
 @inject ICollectionService CollectionService
 @inject NavigationManager Nav
 @inject NotificationService Notifications
+@inject IServiceProvider Services
 @rendermode InteractiveServer
+
+
+<PageTitle>@collection?.Label</PageTitle>
 
 <!-- HEADER -->
 <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px">
@@ -35,26 +40,31 @@
             <RadzenButton Text="Save"
                           ButtonStyle="ButtonStyle.Primary"
                           Disabled="@isSaving"
-                          Click="Save" />
+                          Click="@(() => OnSaveClick(null))" />
         }
         else
         {
-            <RadzenSplitButton Click="Save" Text="Save" Disabled="@isSaving" ButtonStyle="ButtonStyle.Primary">
-                <ChildContent>
-                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndStayHere))
-                    {
-                        <RadzenSplitButtonItem Text="Save and Stay Here" Value="1" />
-                    }
-                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndClone))
-                    {
-                        <RadzenSplitButtonItem Text="Save and Clone" Value="1"/>
-                    }
-                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndGoToNext))
-                    {
-                        <RadzenSplitButtonItem Text="Save and Go to Next" Value="1"/>
-                    }
-                </ChildContent>
-            </RadzenSplitButton>
+            <RadzenSplitButton Click="@OnSaveClick" Text="Save" Disabled="@isSaving" ButtonStyle="ButtonStyle.Primary">                                                                                                                                                                                                                                                                                                                    
+                  <ChildContent>                                                                                                                                                                                                                                                                                                                                                                                                             
+                      @if (collection.SaveOption.HasFlag(SaveOption.SaveAndStayHere))                                                                                                                                                                                                                                                                                                                                                      
+                      {                                                                                                                                                                                                                                                                                                                                                                                                                      
+                          <RadzenSplitButtonItem Text="Save and Stay Here" Value="stay" />
+                      }
+                      @if (collection.SaveOption.HasFlag(SaveOption.SaveAndClone))
+                      {
+                          <RadzenSplitButtonItem Text="Save and Clone" Value="clone" />
+                      }
+                      @if (collection.SaveOption.HasFlag(SaveOption.SaveAndGoToNext))
+                      {
+                          <RadzenSplitButtonItem Text="Save and Go to Next" Value="next" />
+                      }
+                      @foreach (var action in collection.CustomSaveActions)
+                      {
+                          <RadzenSplitButtonItem Text="@action.Label" Value="@action.Value" />
+                      }
+                  </ChildContent>
+              </RadzenSplitButton>
+
         }
 
     </RadzenStack>
@@ -336,20 +346,66 @@
         )).ToList();
     }
 
-    private async Task Save()
+    private async Task OnSaveClick(RadzenSplitButtonItem? item)
     {
         isSaving = true;
 
-        validationErrors = isNew
-            ? await CollectionService.CreateAsync(Slug, formValues)
-            : await CollectionService.UpdateAsync(Slug, Guid.Parse(Id!), formValues);
+        Guid savedId;
+        if (isNew)
+        {
+            var result = await CollectionService.CreateAsync(Slug, formValues);
+            validationErrors = result.Errors;
+            savedId = result.Id;
+        }
+        else
+        {
+            validationErrors = await CollectionService.UpdateAsync(Slug, Guid.Parse(Id!), formValues);
+            savedId = Guid.Parse(Id!);
+        }
 
         isSaving = false;
+        if (validationErrors.Count > 0) return;
 
-        if (validationErrors.Count == 0)
+        Notifications.Notify(NotificationSeverity.Success, "Saved", duration: 3000);
+
+        var custom = collection.CustomSaveActions.FirstOrDefault(x => x.Value == item?.Value);
+
+        if (custom is not null)
         {
-            Notifications.Notify(NotificationSeverity.Success, "Saved", duration: 3000);
-            Nav.NavigateTo($"/admin/collections/{Slug}");
+            var url = await custom.ExecuteAsync(new SaveActionContext(Slug, savedId, CollectionService, Services));
+            Nav.NavigateTo(url ?? $"/admin/collections/{Slug}");
+            return;
+        }
+
+    switch (item?.Value)
+        {
+            case "stay":
+                Nav.NavigateTo($"/admin/collections/{Slug}/{savedId}", forceLoad: false);
+                break;
+
+            case "clone":
+                var clone = await CollectionService.CreateAsync(Slug, formValues);
+                if (clone.Errors.Count > 0)
+                {
+                    validationErrors = clone.Errors;
+                    return;
+                }
+                Nav.NavigateTo($"/admin/collections/{Slug}/{clone.Id}");
+                break;
+
+            case "next":
+                var all = await CollectionService.GetAllAsync(Slug);
+                all.Reverse();
+                var idx = all.FindIndex(d => d.Id == savedId);
+                var next = idx >= 0 && idx + 1 < all.Count ? all[idx + 1] : null;
+                Nav.NavigateTo(next is not null
+                    ? $"/admin/collections/{Slug}/{next.Id}"
+                    : $"/admin/collections/{Slug}");
+                break;
+
+            default:
+                Nav.NavigateTo($"/admin/collections/{Slug}");
+                break;
         }
     }
 }

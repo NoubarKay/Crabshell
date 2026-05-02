@@ -1,12 +1,14 @@
 using Crabshell.Core.Attributes;
 using Crabshell.Core.Attributes.Fields;
 using Crabshell.Core.Documents;
+using Crabshell.Sample.Actions;
 
 namespace Crabshell.Sample.Collections;
 
 [Collection("agencies", 
     Label = "Agencies",
-    SaveOptions = SaveOption.Save | SaveOption.SaveAndClone |  SaveOption.SaveAndGoToNext
+    SaveOptions = SaveOption.Save | SaveOption.SaveAndClone |  SaveOption.SaveAndGoToNext,
+    CustomSaveOptions =  new[] { typeof(PublishAction) }
     )]
 public class Agency : CrabshellDocument
 {

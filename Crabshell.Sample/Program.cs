@@ -52,7 +52,6 @@ app.Run();
 //TODO: Static analyzer
 //TODO: REGEX is not working on text input
 //TODO: Research form builder
-//TODO: Split button, with saving abilities.
 //TODO: RECURRING like hangfire
 //TODO: ADD COLLAPSIBLE TO FIELD GROUP and default collapse state (Also check tabs)
 //TODO: Dynamic enums
