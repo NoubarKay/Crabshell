@@ -28,7 +28,20 @@ cd Crabshell.Sample
 dotnet ef database update
 ```
 
-**3. Run the app**
+**3. Register Crabshell in `Program.cs`**
+
+```csharp
+builder.Services.AddCrabshellCore(typeof(Program).Assembly);
+builder.Services.AddCrabshellData<CrabshellDb>(
+    builder.Configuration.GetConnectionString("DefaultConnection")!);
+
+// ...
+
+app.MapCrabshellAdmin();
+await app.UseCrabshellDataAsync();
+```
+
+**4. Run the app**
 
 ```bash
 dotnet run
@@ -36,7 +49,11 @@ dotnet run
 
 The admin UI is available at `/admin`.
 
+---
+
 ## Defining a collection
+
+Extend `CrabshellDocument` and annotate with `[Collection]`:
 
 ```csharp
 using Crabshell.Core.Attributes;
@@ -60,41 +77,167 @@ public class Article : CrabshellDocument
 public enum ArticleStatus { Draft, Published, Archived }
 ```
 
-Collections are picked up automatically from the assembly registered in `Program.cs`:
-
-```csharp
-builder.Services.AddCrabshellCore(typeof(Program).Assembly);
-builder.Services.AddCrabshellData<CrabshellDb>(builder.Configuration.GetConnectionString("DefaultConnection")!);
-```
-
-After adding a new collection, create and apply a new migration:
+Collections are picked up automatically from the assembly passed to `AddCrabshellCore`. After adding a new collection, create and apply a migration:
 
 ```bash
 dotnet ef migrations add AddArticles
 dotnet ef database update
 ```
 
-## Available field attributes
+### `[Collection]` options
 
-| Attribute | Description |
+| Property | Type | Description |
+|---|---|---|
+| `Slug` *(required)* | `string` | URL-safe identifier used as the table name and route segment |
+| `Label` | `string?` | Human-readable name shown in the admin UI. Defaults to the slug |
+| `SaveOptions` | `SaveOption` | Flags controlling which save actions appear in the edit page button |
+| `CustomSaveOptions` | `Type[]` | Custom save action types added to the split button — see [Custom Save Actions](docs/custom-save-actions.md) |
+
+---
+
+## Field attributes
+
+Only one field attribute may be applied per property. All field attributes share these base options:
+
+| Option | Type | Description |
+|---|---|---|
+| `Label` | `string?` | Field label shown in the admin UI. Defaults to the property name |
+| `Required` | `bool` | Marks the field as required. Validated on save |
+
+### `[TextField]`
+
+Maps to a `varchar` or `text` column.
+
+| Option | Default | Description |
+|---|---|---|
+| `MaxLength` | `255` | Max character length. `-1` = unlimited (`text` column) |
+| `MinLength` | `0` | Minimum character length |
+| `Pattern` | `null` | Regex pattern validated on save |
+
+### `[NumberField]`
+
+Maps to `integer`, `bigint`, `numeric`, or `double precision` based on the CLR type.
+
+| Option | Default | Description |
+|---|---|---|
+| `Decimals` | `2` | Decimal places (only for `decimal` properties) |
+| `Min` | — | Minimum allowed value |
+| `Max` | — | Maximum allowed value |
+| `Step` | `"1"` | Spinner increment in the admin UI |
+| `Prefix` | `null` | Text shown before the input, e.g. `"$"` |
+| `Suffix` | `null` | Text shown after the input, e.g. `"%"` |
+| `Format` | `null` | Display format string |
+
+### `[BoolField]`
+
+Maps to a `boolean` column.
+
+| Option | Default | Description |
+|---|---|---|
+| `IsSwitch` | `false` | Renders as a toggle switch instead of a checkbox |
+
+### `[SelectField]`
+
+Maps to an `integer` (enum) or `varchar(255)` (string options) column.
+
+| Option | Default | Description |
+|---|---|---|
+| `Options` | `[]` | Explicit string options. Ignored if the property type is an enum |
+| `Multiple` | `false` | Allow multiple selections |
+
+When the property type is an enum, options are derived automatically from the enum member names.
+
+### `[DateTimeField]`
+
+Maps to `date`, `timestamptz`, or `timetz` depending on the options.
+
+| Option | Default | Description |
+|---|---|---|
+| `HasTime` | `true` | Include a time component (`timestamptz`) |
+| `TimeOnly` | `false` | Show only a time picker (`timetz`) |
+| `Utc` | `true` | Store as UTC |
+| `Min` / `Max` | `null` | Allowed date range, format `"yyyy-MM-dd"` |
+| `ShowNowButton` | `false` | Add a "Now" shortcut button |
+| `HoursStep` | `1` | Hour increment in the time picker |
+| `MinutesStep` | `1` | Minute increment |
+| `SecondsStep` | `1` | Second increment |
+| `Immediate` | `false` | Update value on every keystroke |
+| `Inline` | `false` | Show the calendar inline (always visible) |
+| `ShowButton` | `true` | Show the calendar icon button |
+| `YearRange` | `"1950:2056"` | Range shown in the year dropdown |
+| `DateFormat` | `null` | Display format, e.g. `"MM/dd/yyyy"` |
+
+### `[RelationshipField(typeof(T))]`
+
+Maps to a `uuid` foreign key column pointing to another collection.
+
+```csharp
+[RelationshipField(typeof(Agency), Label = "Agency")]
+public Guid? AgencyId { get; set; }
+```
+
+The dropdown in the admin UI is populated from the related collection and filtered by the first `[TextField]` on that type.
+
+---
+
+## Grid options
+
+Use `[GridOptions]` alongside a field attribute to control how the column appears in the collection list view.
+
+| Option | Default | Description |
+|---|---|---|
+| `Visible` | `true` | Show this field as a column |
+| `Label` | field label | Column header override |
+| `Order` | `0` | Column position — lower = further left |
+| `Width` | `0` | Column width in pixels. `0` = auto |
+| `Sortable` | `true` | Allow sorting by this column |
+| `Filterable` | `false` | Allow filtering by this column |
+
+---
+
+## Field groups
+
+Use `[FieldGroup]` to group related fields together in the edit page. Groups can be placed in the main content area or the sidebar.
+
+```csharp
+[FieldGroup("SEO", Sidebar = true)]
+[TextField(MaxLength = 160, Label = "Meta Description")]
+public string? MetaDescription { get; set; }
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `Name` *(required)* | — | Group heading shown in the UI |
+| `Sidebar` | `false` | Place the group in the right sidebar instead of the main area |
+
+---
+
+## Save options
+
+Control which actions appear on the edit page Save button via the `SaveOptions` flag:
+
+```csharp
+[Collection("articles",
+    SaveOptions = SaveOption.Save | SaveOption.SaveAndStayHere | SaveOption.SaveAndClone)]
+```
+
+| Flag | Behaviour |
 |---|---|
-| `[TextField]` | Single or multiline text |
-| `[NumberField]` | Numeric input with optional prefix/suffix/decimals |
-| `[BoolField]` | Checkbox or toggle switch |
-| `[SelectField]` | Dropdown from an enum (supports `Multiple = true`) |
-| `[DateTimeField]` | Date/time picker |
-| `[RelationshipField]` | Foreign key to another collection |
+| `SaveOption.Save` | Navigate to the collection list after saving |
+| `SaveOption.SaveAndStayHere` | Stay on the edit page (updates the URL to the new ID if creating) |
+| `SaveOption.SaveAndClone` | Duplicate the document and open the clone for editing |
+| `SaveOption.SaveAndGoToNext` | Navigate to the next document in the list |
 
-Use `[GridOptions]` on any field to control column visibility, order, width, sorting, and filtering in the list view.
+For custom save behaviour (e.g. "Save and Publish"), see [Custom Save Actions](docs/custom-save-actions.md).
 
-# Feature Requests
+---
 
-When it comes to feature requests you have a few options
+## Feature Requests
 
-* Make an issue in the repo requesting the change. The change will be made if someone wants to make it or when I have time.
-* Make your own pull request.
-* Pay someone to do it for you.
+- Open an issue — changes are made when someone volunteers or when time allows.
+- Submit a pull request.
+- Hire someone to implement it.
 
 ## Support
 
-The support you get it the support you pay for.
+The support you get is the support you pay for.
