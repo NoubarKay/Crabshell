@@ -21,6 +21,8 @@ public sealed class CollectionAttribute : Attribute
     public SaveOption SaveOptions { get; set; } = SaveOption.Save;
 
     public Type[] CustomSaveOptions { get; set; } = [];
+    
+    public Type[] CustomBulkOptions { get; set; } = [];
  
     public CollectionAttribute(string slug)
     {

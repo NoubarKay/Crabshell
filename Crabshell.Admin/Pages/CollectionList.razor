@@ -3,6 +3,7 @@
 @inject CollectionRegistry Registry
 @inject ICollectionService CollectionService
 @inject NavigationManager Nav
+@inject IServiceProvider ServiceProvider
 @rendermode InteractiveServer
 
 <!-- HEADER -->
@@ -16,9 +17,26 @@
             @collection?.Label
         </RadzenText>
     </div>
-    <RadzenButton Text="@($"New {collection?.Label}")"
-                  ButtonStyle="ButtonStyle.Primary"
-                  Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}/new"))" />
+    <div style="display: flex;flex-direction: row; align-items: center; justify-content: center; gap: 1rem;">
+        <RadzenButton Text="@($"New {collection?.Label}")"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}/new"))" />
+    
+        @if (collection?.CustomBulkOptions.Any() == true && selectedDocuments.Any())
+        {
+            <RadzenSplitButton Text="@($"Actions ({selectedDocuments.Count})")"
+                               ButtonStyle="ButtonStyle.Secondary"
+                               Click="@OnBulkAction">
+                <ChildContent>
+                    @foreach (var action in collection.CustomBulkOptions)
+                    {
+                        <RadzenSplitButtonItem Text="@action.Label" Value="@action.Value" />
+                    }
+                </ChildContent>
+            </RadzenSplitButton>
+        }
+    </div>
+        
 </div>
 
 @if (collection is not null)
@@ -185,6 +203,22 @@
         documents = result.ToList();
 
         isLoading = false;
+    }
+
+    private async Task OnBulkAction(RadzenSplitButtonItem item)
+    {
+        var action = collection?.CustomBulkOptions.FirstOrDefault(a => a.Value == item.Value);
+        if (action is null) return;
+
+        var ctx = new BulkActionContext(
+            Slug,
+            selectedDocuments.Select(d => d.Id).ToList(),
+            CollectionService,
+            ServiceProvider
+        );
+        await action.ExecuteAsync(ctx);
+        selectedDocuments = [];
+        await LoadData(new LoadDataArgs());
     }
 
     private void ToggleSelection(CrabshellDocument doc)

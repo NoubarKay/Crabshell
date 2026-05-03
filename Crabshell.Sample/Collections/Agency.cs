@@ -5,10 +5,11 @@ using Crabshell.Sample.Actions;
 
 namespace Crabshell.Sample.Collections;
 
-[Collection("agencies", 
+[Collection("agencies",
     Label = "Agencies",
-    SaveOptions = SaveOption.Save | SaveOption.SaveAndClone |  SaveOption.SaveAndGoToNext,
-    CustomSaveOptions =  new[] { typeof(PublishAction) }
+    SaveOptions = SaveOption.Save | SaveOption.SaveAndClone | SaveOption.SaveAndGoToNext,
+    CustomSaveOptions = new[] { typeof(PublishAction) },
+    CustomBulkOptions = new[] { typeof(DeleteSelectedAgenciesAction) }
     )]
 public class Agency : CrabshellDocument
 {

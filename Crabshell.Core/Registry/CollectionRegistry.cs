@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Crabshell.Core.Attributes;
 using Crabshell.Core.Attributes.Fields;
+using Crabshell.Core.BulkActions;
 using Crabshell.Core.Documents;
 using Crabshell.Core.SaveActions;
 
@@ -31,6 +32,7 @@ public sealed class CollectionRegistry
             
             //Check for custom save actions
             var customSaveActions = BuildCustomSaveActions(attribute.CustomSaveOptions, type.Name);
+            var customBulkActions = BuildBulkActions(attribute.CustomBulkOptions, type.Name);
 
 
             if (!_safeSlug.IsMatch(slug))
@@ -191,6 +193,7 @@ public sealed class CollectionRegistry
                 Fields  = fieldMetas.AsReadOnly(),
                 SaveOption = saveOptions,
                 CustomSaveActions  = customSaveActions.AsReadOnly(),
+                CustomBulkOptions = customBulkActions.AsReadOnly(),
             };
         }
     }
@@ -290,6 +293,28 @@ public sealed class CollectionRegistry
             if (_reservedSaveValues.Contains(instance.Value))
                 throw new InvalidOperationException(
                     $"'{actionType.Name}' uses reserved Value '{instance.Value}'. Reserved: stay, clone, next.");
+
+            actions.Add(instance);
+        }
+
+        return actions;
+    }
+    
+    private static List<IBulkAction> BuildBulkActions(Type[] types, string collectionTypeName)
+    {
+        var actions = new List<IBulkAction>();
+
+        foreach (var actionType in types)
+        {
+            if (!typeof(IBulkAction).IsAssignableFrom(actionType))
+                throw new InvalidOperationException(
+                    $"'{actionType.Name}' on '{collectionTypeName}' must implement IBulkAction.");
+
+            if (actionType.GetConstructor(Type.EmptyTypes) is null)
+                throw new InvalidOperationException(
+                    $"'{actionType.Name}' on '{collectionTypeName}' must have a public parameterless constructor.");
+
+            var instance = (IBulkAction)Activator.CreateInstance(actionType)!;
 
             actions.Add(instance);
         }
