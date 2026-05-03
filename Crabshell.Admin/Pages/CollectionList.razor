@@ -86,6 +86,7 @@
 @code {
     [Parameter] public string Slug { get; set; } = default!;
     private List<CrabshellDocument> documents = [];
+    private IList<CrabshellDocument> selectedDocuments = [];
     private CollectionMeta? collection;
     private Dictionary<string, List<CrabshellDocument>> relatedDocuments = new();
     int count;
@@ -184,6 +185,14 @@
         documents = result.ToList();
 
         isLoading = false;
+    }
+
+    private void ToggleSelection(CrabshellDocument doc)
+    {
+        var list = selectedDocuments.ToList();
+        if (list.Contains(doc)) list.Remove(doc);
+        else list.Add(doc);
+        selectedDocuments = list;
     }
 
     private async Task Delete(CrabshellDocument doc)
