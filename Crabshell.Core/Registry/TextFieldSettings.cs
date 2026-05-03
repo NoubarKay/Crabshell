@@ -4,4 +4,5 @@ public sealed class TextFieldSettings
 {
     public int MaxLength { get; init; }
     public int MinLength { get; init; }
+    public string? Pattern { get; init; }
 }

@@ -72,7 +72,7 @@ public sealed class CollectionRegistry
                         accessors,
                         (textAttr.MaxLength == -1 ? "text" :  $"varchar({textAttr.MaxLength})"),
                         v=> v,
-                        textSettings: new TextFieldSettings { MaxLength = textAttr.MaxLength, MinLength = textAttr.MinLength }));
+                        textSettings: new TextFieldSettings { MaxLength = textAttr.MaxLength, MinLength = textAttr.MinLength, Pattern = textAttr.Pattern }));
 
                 var selectAttr = p.GetCustomAttribute<SelectFieldAttribute>();
                 if (selectAttr is not null)

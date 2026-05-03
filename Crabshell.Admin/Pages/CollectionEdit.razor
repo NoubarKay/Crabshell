@@ -247,8 +247,17 @@
             }
             @if (field.FieldType == FieldType.Text)
             {
-                <RadzenTextBox @bind-Value="formValues[field.PropertyName]"
-                               Style="width:100%" />
+                @if (field.TextSettings?.MaxLength == -1)
+                {
+                    <RadzenTextArea @bind-Value="formValues[field.PropertyName]"
+                                    Rows="5"
+                                    Style="width:100%" />
+                }
+                else
+                {
+                    <RadzenTextBox @bind-Value="formValues[field.PropertyName]"
+                                   Style="width:100%" />
+                }
             }
             else if (field.FieldType == FieldType.Select)
             {
@@ -312,6 +321,10 @@
             {
                 var ns = field.NumberSettings!;
                 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="4px">
+                    @if (ns.Prefix is not null)
+                    {
+                        <RadzenLabel Text="@ns.Prefix" Style="font-size:14px;color:var(--rz-text-secondary-color)" />
+                    }
                     <RadzenNumeric TValue="decimal?"
                                    Value="@(decimal.TryParse(formValues[field.PropertyName], out var n) ? n : null)"
                                    ValueChanged="@((decimal? v) => formValues[field.PropertyName] = v?.ToString())"

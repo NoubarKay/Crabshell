@@ -92,6 +92,7 @@ dotnet ef database update
 | `Label` | `string?` | Human-readable name shown in the admin UI. Defaults to the slug |
 | `SaveOptions` | `SaveOption` | Flags controlling which save actions appear in the edit page button |
 | `CustomSaveOptions` | `Type[]` | Custom save action types added to the split button — see [Custom Save Actions](docs/custom-save-actions.md) |
+| `CustomBulkOptions` | `Type[]` | Bulk action types shown in the Actions button on the collection list — see [Bulk Actions](docs/bulk-actions.md) |
 
 ---
 
@@ -229,6 +230,8 @@ Control which actions appear on the edit page Save button via the `SaveOptions` 
 | `SaveOption.SaveAndGoToNext` | Navigate to the next document in the list |
 
 For custom save behaviour (e.g. "Save and Publish"), see [Custom Save Actions](docs/custom-save-actions.md).
+
+For bulk operations on multiple selected records (e.g. "Delete Selected", "Export Selected"), see [Bulk Actions](docs/bulk-actions.md).
 
 ---
 
