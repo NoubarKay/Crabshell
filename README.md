@@ -92,6 +92,7 @@ dotnet ef database update
 | `Label` | `string?` | Human-readable name shown in the admin UI. Defaults to the slug |
 | `SaveOptions` | `SaveOption` | Flags controlling which save actions appear in the edit page button |
 | `CustomSaveOptions` | `Type[]` | Custom save action types added to the split button — see [Custom Save Actions](docs/custom-save-actions.md) |
+| `CustomBulkOptions` | `Type[]` | Bulk action types shown in the Actions button on the collection list — see [Custom Bulk Actions](docs/bulk-actions.md) |
 
 ---
 
