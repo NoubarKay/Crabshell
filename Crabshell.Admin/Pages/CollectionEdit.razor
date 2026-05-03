@@ -233,7 +233,7 @@
         {
             if (field.RelationshipSettings is null) continue;
             relatedDocuments[field.PropertyName] =
-                await CollectionService.GetAllAsync(field.RelationshipSettings.Slug);
+                (await CollectionService.GetAllAsync(field.RelationshipSettings.Slug)).ToList();
         }
     }
 
@@ -394,7 +394,7 @@
                 break;
 
             case "next":
-                var all = await CollectionService.GetAllAsync(Slug);
+                var all = (await CollectionService.GetAllAsync(Slug)).ToList();
                 all.Reverse();
                 var idx = all.FindIndex(d => d.Id == savedId);
                 var next = idx >= 0 && idx + 1 < all.Count ? all[idx + 1] : null;

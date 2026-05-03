@@ -22,12 +22,8 @@ public class CollectionRepository : ICollectionRepository
             .MakeGenericMethod(collection.ClrType)
             .Invoke(DbContext, null)!;
 
-    public virtual async Task<List<CrabshellDocument>> GetAllAsync(
-        CollectionMeta collection, int page = 1, int pageSize = 50) =>
-        await GetQueryable(collection)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+    public virtual async Task<IQueryable<CrabshellDocument>> GetAllAsync(CollectionMeta collection) =>
+        GetQueryable(collection);
 
     public virtual async Task<CrabshellDocument?> GetByIdAsync(
         CollectionMeta collection, Guid id) =>

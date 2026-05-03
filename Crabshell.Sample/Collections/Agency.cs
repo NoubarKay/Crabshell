@@ -39,4 +39,8 @@ public class Agency : CrabshellDocument
     [GridOptions(Visible = false)]
     [TextField(MaxLength = -1, Label = "About")]
     public string? About { get; set; }
+    
+    [GridOptions(Visible = false)]
+    [TextField(MaxLength = -1, Label = "Description")]
+    public string? Description { get; set; }
 }

@@ -24,43 +24,58 @@
 @if (collection is not null)
 {
     <RadzenCard Style="padding:0;overflow:hidden">
-        <RadzenDataGrid Data="@filteredDocuments" TItem="CrabshellDocument" AllowSorting="true" AllowFiltering="true"
+        <RadzenDataGrid Data="@documents"
+                        TItem="CrabshellDocument"
+                        AllowSorting="true"
+                        LoadData="LoadData"
+                        IsLoading=@isLoading
+                        AllowFiltering="true"
+                        AllowPaging="true"
+                        PageSize="20"
+                        FilterMode="FilterMode.Advanced"
+                        Count="@count"
+                        ShowPagingSummary="true"
+                        PageSizeOptions="pageSizeOptions"
+                        SelectionMode="DataGridSelectionMode.Multiple"
+                        @bind-Value="selectedDocuments"
+                        AllowRowSelectOnRowClick="false"
                         Style="border:none">
                 <Columns>
+                    <RadzenDataGridColumn TItem="CrabshellDocument" Width="48px" Sortable="false" Filterable="false">
+                        <HeaderTemplate>
+                            <RadzenCheckBox TValue="bool"
+                                            Value="@(documents.Any() && documents.All(d => selectedDocuments.Contains(d)))"
+                                            Change="@(v => selectedDocuments = v ? documents.ToList() : [])" />
+                        </HeaderTemplate>
+                        <Template Context="doc">
+                            <RadzenCheckBox TValue="bool"
+                                            Value="@(selectedDocuments.Contains(doc))"
+                                            Change="@(_ => ToggleSelection(doc))" />
+                        </Template>
+                    </RadzenDataGridColumn>
                     @foreach (var field in collection.Fields
                                   .Where(f => f.GridVisible)
                                   .OrderBy(f => f.GridOrder))
                     {
                         var f = field;
                         <RadzenDataGridColumn TItem="CrabshellDocument"
-                                              Title="@f.Label"
-                                              Width="@(f.GridWidth > 0 ? $"{f.GridWidth}px" : "")"
-                                              Sortable="@f.GridSortable"
-                                              Filterable="@f.GridFilterable">
+                            Type="@f.ClrType"
+                            Title="@f.Label"
+                            Width="@(f.GridWidth > 0 ? $"{f.GridWidth}px" : "")"
+                            Sortable="@f.GridSortable"
+                            Filterable="@f.GridFilterable"
+                            Property="@f.PropertyName">
                             <Template Context="doc">
                                 @GetDisplayValue(doc, f)
                             </Template>
-                            <FilterTemplate Context="col">
-                                <RadzenTextBox Value="@(GetFilterValue(f.PropertyName))"
-                                               ValueChanged="@(v => ApplyFilter(f.PropertyName, v))"
-                                               Style="width:100%" />
-                            </FilterTemplate>
                         </RadzenDataGridColumn>
                     }
-                    <RadzenDataGridColumn TItem="CrabshellDocument" Title="" Width="150px" Sortable="false">
+                    <RadzenDataGridColumn TItem="CrabshellDocument" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="120px">
                         <Template Context="doc">
-                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0px">
-                                <RadzenButton Text="Edit"
-                                              ButtonStyle="ButtonStyle.Primary"
-                                              Variant="Variant.Text"
-                                              Size="ButtonSize.Small"
-                                              Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}/{doc.Id}"))" />
-                                <RadzenButton Text="Delete"
-                                              ButtonStyle="ButtonStyle.Danger"
-                                              Variant="Variant.Text"
-                                              Size="ButtonSize.Small"
-                                              Click="@(() => Delete(doc))" />
-                            </RadzenStack>
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true"
+                                          Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}/{doc.Id}"))" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Size="ButtonSize.Medium" Shade="Shade.Lighter" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true"
+                                          Click="@(() => Delete(doc))" />
                         </Template>
                     </RadzenDataGridColumn>
                 </Columns>
@@ -71,26 +86,110 @@
 @code {
     [Parameter] public string Slug { get; set; } = default!;
     private List<CrabshellDocument> documents = [];
-    private List<CrabshellDocument> filteredDocuments = [];
     private CollectionMeta? collection;
     private Dictionary<string, List<CrabshellDocument>> relatedDocuments = new();
-    private Dictionary<string, string> filters = new();
+    int count;
+    bool isLoading;
+    IEnumerable<int> pageSizeOptions = new int[] { 10, 20, 30 };
 
     protected override async Task OnParametersSetAsync()
     {
-        collection = Registry.Get(Slug);
-        if (collection is null) return;
+        await LoadData(new LoadDataArgs());
+    }
 
-        documents = await CollectionService.GetAllAsync(Slug);
-        filters = new();
-        filteredDocuments = documents;
+    private async Task LoadData(LoadDataArgs args)
+    {
+        isLoading = true;
+        collection = Registry.Get(Slug);
+        if (collection is null)
+        {
+            isLoading = false;
+            return;
+        }
+
+        IQueryable<CrabshellDocument> query = await CollectionService.GetAllAsync(Slug);
 
         relatedDocuments = new();
         foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship && f.GridVisible))
         {
             if (field.RelationshipSettings is null) continue;
-            relatedDocuments[field.PropertyName] = await CollectionService.GetAllAsync(field.RelationshipSettings.Slug);
+            relatedDocuments[field.PropertyName] = (await CollectionService.GetAllAsync(field.RelationshipSettings.Slug)).ToList();
         }
+
+        foreach (var f in args.Filters ?? Enumerable.Empty<FilterDescriptor>())
+        {
+            if(f.FilterValue is null) continue;
+
+            var fieldMeta = collection.Fields.FirstOrDefault(x => x.PropertyName == f.Property);
+            
+            if(fieldMeta is null) continue;
+
+            var param = Expression.Parameter(typeof(CrabshellDocument), "doc");
+            var prop = Expression.Property(Expression.Convert(param, collection.ClrType), f.Property);
+
+            var underlyingType = Nullable.GetUnderlyingType(fieldMeta.ClrType) ?? fieldMeta.ClrType;
+            var convertedValue = Convert.ChangeType(f.FilterValue, underlyingType);
+            var constant = Expression.Constant(convertedValue, fieldMeta.ClrType);
+            
+            Expression? body = f.FilterOperator switch
+            {
+                FilterOperator.Contains => Expression.Call(prop, nameof(string.Contains),    null, constant),
+                FilterOperator.DoesNotContain => Expression.Call(prop, nameof(string.Contains),    null, constant),
+                FilterOperator.StartsWith => Expression.Call(prop, nameof(string.StartsWith),  null, constant),
+                FilterOperator.EndsWith => Expression.Call(prop, nameof(string.EndsWith),    null, constant),
+                FilterOperator.Equals => Expression.Equal(prop, constant),
+                FilterOperator.NotEquals => Expression.NotEqual(prop, constant),
+                FilterOperator.GreaterThan => Expression.GreaterThan(prop, constant),
+                FilterOperator.GreaterThanOrEquals => Expression.GreaterThanOrEqual(prop, constant),
+                FilterOperator.LessThan => Expression.LessThan(prop, constant),
+                FilterOperator.LessThanOrEquals => Expression.LessThanOrEqual(prop, constant),
+                _ => null
+            };
+            
+            if (body is null) continue;
+            query = query.Where(Expression.Lambda<Func<CrabshellDocument, bool>>(body, param));
+
+        }
+
+        if (!string.IsNullOrEmpty(args.OrderBy))
+        {
+            var parts = args.OrderBy.Split(' ');
+            var propName = parts[0];
+            var desc = parts.Length > 1 && parts[1].Equals("desc", StringComparison.OrdinalIgnoreCase);
+            var sortField = collection.Fields.FirstOrDefault(f => f.PropertyName == propName);
+            if (sortField is not null)
+            {
+                var param = Expression.Parameter(typeof(CrabshellDocument), "doc");
+                var keySelector = Expression.Lambda(
+                    Expression.Property(Expression.Convert(param, collection.ClrType), propName),
+                    param);
+                var orderMethod = desc ? "OrderByDescending" : "OrderBy";
+                var method = typeof(Queryable)
+                    .GetMethods()
+                    .First(m => m.Name == orderMethod && m.GetParameters().Length == 2)
+                    .MakeGenericMethod(typeof(CrabshellDocument), sortField.ClrType);
+                query = (IQueryable<CrabshellDocument>)method.Invoke(null, [query, keySelector])!;
+            }
+        }
+
+        IEnumerable<CrabshellDocument> result = query;
+
+        count = result.Count();
+
+
+        if (args.Skip != null && args.Top != null)
+            result = result.Skip(args.Skip.Value).Take(args.Top.Value);
+
+        
+        documents = result.ToList();
+
+        isLoading = false;
+    }
+
+    private async Task Delete(CrabshellDocument doc)
+    {
+        await CollectionService.DeleteAsync(Slug, doc.Id);
+        await LoadData(new LoadDataArgs());
     }
 
     private string GetDisplayValue(CrabshellDocument doc, FieldMeta field)
@@ -114,32 +213,5 @@
         var firstTextField = relatedMeta?.Fields.FirstOrDefault(f => f.FieldType == FieldType.Text);
         return firstTextField?.Getter(relatedDoc)?.ToString() ?? rawValue;
     }
-
-    private string GetFilterValue(string propertyName) =>
-        filters.TryGetValue(propertyName, out var v) ? v : "";
-
-    private void ApplyFilter(string propertyName, string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            filters.Remove(propertyName);
-        else
-            filters[propertyName] = value;
-
-        filteredDocuments = documents.Where(doc =>
-            filters.All(kvp =>
-            {
-                var field = collection!.Fields.FirstOrDefault(f => f.PropertyName == kvp.Key);
-                if (field is null) return true;
-                var display = GetDisplayValue(doc, field);
-                return display.Contains(kvp.Value, StringComparison.OrdinalIgnoreCase);
-            })
-        ).ToList();
-    }
-
-    private async Task Delete(CrabshellDocument doc)
-    {
-        await CollectionService.DeleteAsync(Slug, doc.Id);
-        documents.Remove(doc);
-        filteredDocuments = filteredDocuments.Where(d => d.Id != doc.Id).ToList();
-    }
+    
 }
