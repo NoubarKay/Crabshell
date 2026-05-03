@@ -153,7 +153,7 @@
             Expression? body = f.FilterOperator switch
             {
                 FilterOperator.Contains => Expression.Call(prop, nameof(string.Contains),    null, constant),
-                FilterOperator.DoesNotContain => Expression.Not(prop, nameof(string.Contains),    null, constant),
+                FilterOperator.DoesNotContain => Expression.Not(Expression.Call(prop, nameof(string.Contains), null, constant)),
                 FilterOperator.StartsWith => Expression.Call(prop, nameof(string.StartsWith),  null, constant),
                 FilterOperator.EndsWith => Expression.Call(prop, nameof(string.EndsWith),    null, constant),
                 FilterOperator.Equals => Expression.Equal(prop, constant),
