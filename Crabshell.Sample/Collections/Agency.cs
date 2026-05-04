@@ -42,6 +42,10 @@ public class Agency : CrabshellDocument
     public string? About { get; set; }
     
     [GridOptions(Visible = false)]
-    [TextField(MaxLength = -1, Label = "Description")]
+    [RichTextField(Label = "Description")]
     public string? Description { get; set; }
+    
+    [GridOptions(Visible = false)]
+    [TextField(Label = "Address", MaxLength = -1)]
+    public string? Address { get; set; }
 }

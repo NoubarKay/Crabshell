@@ -339,6 +339,11 @@
                     }
                 </RadzenStack>
             }
+            else if (field.FieldType == FieldType.RichText)
+            {
+                <RadzenHtmlEditor @bind-Value="formValues[field.PropertyName]"
+                                  Style="height:300px;width:100%" />
+            }
         </RadzenStack>;
     };
 

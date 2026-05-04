@@ -235,8 +235,18 @@
         await LoadData(new LoadDataArgs());
     }
 
+    private static readonly System.Text.RegularExpressions.Regex _htmlTagRegex =
+        new(@"<[^>]*>", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     private string GetDisplayValue(CrabshellDocument doc, FieldMeta field)
     {
+        if (field.FieldType == FieldType.RichText)
+        {
+            var html = field.Getter(doc)?.ToString() ?? "";
+            var plain = _htmlTagRegex.Replace(html, "");
+            return plain.Length > 100 ? plain[..100] + "…" : plain;
+        }
+
         if (field.FieldType != FieldType.Relationship)
             return field.Getter(doc)?.ToString() ?? "";
 

@@ -7,5 +7,6 @@ public enum FieldType
     Relationship,
     Bool,
     DateTime,
-    Number
+    Number,
+    RichText
 }

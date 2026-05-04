@@ -124,7 +124,7 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
         FieldType.Number       => "0",
         FieldType.Bool         => "false",
         FieldType.Select       => IsEnumBacked(field) ? "0" : "''",
-        _                      => "''"   // Text
+        _                      => "''"   // Text, RichText
     };
 
     private static bool IsEnumBacked(FieldMeta field)

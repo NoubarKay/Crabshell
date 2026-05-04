@@ -52,6 +52,7 @@ public sealed class CollectionRegistry
                     p.GetCustomAttribute<BoolFieldAttribute>() is not null,
                     p.GetCustomAttribute<DateTimeFieldAttribute>() is not null,
                     p.GetCustomAttribute<NumberFieldAttribute>() is not null,
+                    p.GetCustomAttribute<RichTextFieldAttribute>() is not null,
                 }.Count(x => x);
 
                 if (fieldAttrCount > 1)
@@ -184,6 +185,17 @@ public sealed class CollectionRegistry
                             Format   = numberAttr.Format,
                         }));
                 }
+
+                var richTextAttr = p.GetCustomAttribute<RichTextFieldAttribute>();
+                if (richTextAttr is not null)
+                    fieldMetas.Add(CreateFieldMeta(p,
+                        richTextAttr,
+                        groupAttr,
+                        gridAttr,
+                        accessors,
+                        "text",
+                        v => v,
+                        fieldType: FieldType.RichText));
             }
             _collections[slug] = new CollectionMeta
             {
