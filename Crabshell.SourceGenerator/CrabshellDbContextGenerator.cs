@@ -67,7 +67,10 @@ public class CrabshellDbContextGenerator : IIncrementalGenerator
         });
     }
     private static string Pluralize(string name) =>
-        name.EndsWith("s") ? name : name + "s";
+        name.EndsWith("s") ? name :
+        name.EndsWith("y") ? name.Substring(0, name.Length - 1) + "ies" :
+        name + "s";
+    
     private record CollectionInfo(string ClassName, string FullyQualifiedName, string AssemblyName);
 }
 
