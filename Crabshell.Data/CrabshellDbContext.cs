@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Crabshell.Data;
 
-public partial class CrabshellDbContext(DbContextOptions<CrabshellDbContext> options, CollectionRegistry registry) : DbContext(options)
+public partial class CrabshellDbContext(DbContextOptions<CrabshellDbContext> options, CollectionRegistry registry, CrabshellModelOptions? modelOptions = null) : DbContext(options)
 {
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -47,5 +47,7 @@ public partial class CrabshellDbContext(DbContextOptions<CrabshellDbContext> opt
             var notDeleted = Expression.Equal(isDeleted, Expression.Constant(false));
             entityBuilder.HasQueryFilter(Expression.Lambda(notDeleted, param));
         }
+
+        modelOptions?.Configure?.Invoke(modelBuilder);
     }
 }

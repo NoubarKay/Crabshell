@@ -14,8 +14,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddCrabshellData<TDb>(
         this IServiceCollection services,
-        string connectionString) where TDb : class
+        string connectionString,
+        Action<ModelBuilder>? configureModel = null) where TDb : class
     {
+        services.AddSingleton(new CrabshellModelOptions { Configure = configureModel });
         services.AddDbContext<CrabshellDbContext>(options =>
             options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 

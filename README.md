@@ -233,6 +233,24 @@ For custom save behaviour (e.g. "Save and Publish"), see [Custom Save Actions](d
 
 ---
 
+## Extending the data model
+
+Pass a `configureModel` callback to `AddCrabshellData` to add your own EF Core configuration on top of what Crabshell generates:
+
+```csharp
+builder.Services.AddCrabshellData<CrabshellDb>(
+    builder.Configuration.GetConnectionString("DefaultConnection")!,
+    model =>
+    {
+        model.Entity<Listing>()
+            .HasIndex(l => l.Price);
+    });
+```
+
+The callback runs **after** all Crabshell-managed configuration, so your rules always take precedence. See [Model Configuration](docs/model-configuration.md) for the full reference.
+
+---
+
 ## Feature Requests
 
 - Open an issue — changes are made when someone volunteers or when time allows.
