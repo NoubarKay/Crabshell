@@ -49,7 +49,9 @@ public class CollectionRepository : ICollectionRepository
 
     public virtual async Task DeleteAsync(CrabshellDocument document)
     {
-        DbContext.Remove(document);
+        document.IsDeleted = true;
+        document.DeletedAt = DateTime.UtcNow;
+        DbContext.Update(document);
         await DbContext.SaveChangesAsync();
     }
 }

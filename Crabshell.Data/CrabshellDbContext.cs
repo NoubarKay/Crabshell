@@ -1,4 +1,6 @@
+using System.Linq.Expressions;
 using Crabshell.Core.Attributes;
+using Crabshell.Core.Documents;
 using Crabshell.Core.Registry;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,6 +41,11 @@ public partial class CrabshellDbContext(DbContextOptions<CrabshellDbContext> opt
                     .HasForeignKey(field.PropertyName)
                     .OnDelete(DeleteBehavior.Restrict);
             }
+
+            var param = Expression.Parameter(collection.ClrType, "e");
+            var isDeleted = Expression.Property(param, nameof(CrabshellDocument.IsDeleted));
+            var notDeleted = Expression.Equal(isDeleted, Expression.Constant(false));
+            entityBuilder.HasQueryFilter(Expression.Lambda(notDeleted, param));
         }
     }
 }

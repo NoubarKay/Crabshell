@@ -22,6 +22,14 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
                     if (!existingColumns.Contains(field.ColumnName))
                         await AddColumnAsync(collection.Slug, field);
                 }
+
+                if (!existingColumns.Contains("is_deleted"))
+                    await db.Database.ExecuteSqlRawAsync(
+                        $"""ALTER TABLE "{collection.Slug}" ADD COLUMN IF NOT EXISTS "is_deleted" boolean NOT NULL DEFAULT false;""");
+
+                if (!existingColumns.Contains("deleted_at"))
+                    await db.Database.ExecuteSqlRawAsync(
+                        $"""ALTER TABLE "{collection.Slug}" ADD COLUMN IF NOT EXISTS "deleted_at" timestamptz NULL;""");
             }
         }
 
@@ -73,7 +81,9 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
         {
             "id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY",
             "created_at timestamptz NOT NULL DEFAULT now()",
-            "updated_at timestamptz NOT NULL DEFAULT now()"
+            "updated_at timestamptz NOT NULL DEFAULT now()",
+            "is_deleted boolean NOT NULL DEFAULT false",
+            "deleted_at timestamptz NULL"
         };
 
         foreach (var field in collection.Fields)

@@ -54,9 +54,11 @@ public static class CollectionValidator
 
             if (field.FieldType == FieldType.Select && field.SelectSettings?.Options is { Length: > 0 } opts)
             {
-                if (!opts.Contains(value))
+                var tokens = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var invalid = tokens.Where(t => !opts.Contains(t)).ToList();
+                if (invalid.Count > 0)
                     errors.Add(new ValidationError(field.PropertyName,
-                        $"{field.Label} must be one of: {string.Join(", ", opts)}."));
+                        $"{field.Label} contains invalid option(s): {string.Join(", ", invalid)}."));
             }
 
             if (field.FieldType == FieldType.Relationship)
@@ -73,11 +75,22 @@ public static class CollectionValidator
                         $"{field.Label} must be true or false."));
             }
 
-            if (field.FieldType == FieldType.DateTime)
+            if (field is { FieldType: FieldType.DateTime, DateTimeSettings: { } dt })
             {
-                if (!System.DateTime.TryParse(value, out _))
+                if (!DateTimeOffset.TryParse(value, out var parsed))
+                {
                     errors.Add(new ValidationError(field.PropertyName,
                         $"{field.Label} must be a valid date/time."));
+                }
+                else
+                {
+                    if (dt.Min is not null && DateTimeOffset.TryParse(dt.Min, out var min) && parsed < min)
+                        errors.Add(new ValidationError(field.PropertyName,
+                            $"{field.Label} must be on or after {dt.Min}."));
+                    if (dt.Max is not null && DateTimeOffset.TryParse(dt.Max, out var max) && parsed > max)
+                        errors.Add(new ValidationError(field.PropertyName,
+                            $"{field.Label} must be on or before {dt.Max}."));
+                }
             }
         }
 

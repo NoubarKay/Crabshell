@@ -15,4 +15,7 @@ public abstract class CrabshellFieldAttribute : Attribute
  
     /// <summary>Label shown in the admin UI. Defaults to the property name.</summary>
     public string? Label { get; set; }
+    
+    ///<summary>The default value of the string.</summary>
+    public string? DefaultValue { get; set; }
 }

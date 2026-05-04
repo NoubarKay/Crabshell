@@ -8,6 +8,7 @@ public sealed class FieldMeta
     public string ColumnName { get; init; } = default!;
     public string Label { get; init; } = default!;
     public bool Required { get; init; }
+    public object? DefaultValue { get; init; }
     public Type ClrType { get; init; } = typeof(string);
     public FieldType FieldType { get; init; } = FieldType.Text;
     public Func<object, object?> Getter { get; init; } = default!;

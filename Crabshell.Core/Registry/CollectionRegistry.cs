@@ -238,6 +238,7 @@ public sealed class CollectionRegistry
         ColumnName = ToSnakeCase(p.Name),
         Label = attr.Label ?? p.Name,
         Required = attr.Required,
+        DefaultValue = attr.DefaultValue is null ? null : parser(attr.DefaultValue),
         ClrType = p.PropertyType,
         FieldType = fieldType,
         TextSettings = textSettings,

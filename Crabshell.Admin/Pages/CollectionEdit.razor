@@ -227,6 +227,13 @@
                 ? dt.ToString("O")
                 : raw?.ToString();
         }
+        
+        if (isNew)
+        {
+            foreach (var field in collection.Fields.Where(f => f.DefaultValue is not null))
+                formValues[field.PropertyName] = field.DefaultValue?.ToString();
+        }
+
 
         relatedDocuments = new();
         foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship))
