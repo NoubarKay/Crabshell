@@ -350,7 +350,13 @@
             {
                 <RadzenHtmlEditor @bind-Value="formValues[field.PropertyName]"
                                   Style="height:300px;width:100%" />
+            }else if (field.FieldType == FieldType.Media)
+            {
+                <MediaPicker Field="field"
+                             Value="@formValues[field.PropertyName]"
+                             ValueChanged="@(v => formValues[field.PropertyName] = v)" />
             }
+
         </RadzenStack>;
     };
 

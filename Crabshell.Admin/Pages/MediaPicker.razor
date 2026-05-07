@@ -1,0 +1,120 @@
+@using Crabshell.Core.Media
+@using Microsoft.AspNetCore.Components.Forms
+@inject IMediaProvider MediaProvider
+@inject ICollectionService CollectionService
+
+@if (_currentItem is not null)
+{
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--rz-border-color);border-radius:4px;margin-bottom:8px">
+        @if (_currentItem.ContentType.StartsWith("image/"))
+        {
+            <img src="@_currentItem.Url" style="width:48px;height:48px;object-fit:cover;border-radius:3px" alt="@_currentItem.FileName" />
+        }
+        <div style="flex:1;min-width:0">
+            <RadzenText TextStyle="TextStyle.Body2" Style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@_currentItem.FileName</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">@_sizeLabel</RadzenText>
+        </div>
+        <RadzenButton Icon="close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@Clear" />
+    </div>
+}
+
+@if (_uploading)
+{
+    <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">Uploading...</RadzenText>
+}
+
+@if (!_uploading)
+{
+    <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--rz-primary);border-radius:4px;cursor:pointer;font-size:13px;color:var(--rz-primary)">
+        <InputFile OnChange="@HandleUpload" style="display:none" />
+        @_uploadLabel
+    </label>
+}
+
+@code {
+    [Parameter] public FieldMeta Field { get; set; } = default!;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    private MediaItem? _currentItem;
+    private bool _uploading;
+    private string _uploadLabel = "Upload File";
+    private string _sizeLabel = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Guid.TryParse(Value, out var id))
+        {
+            var doc = await CollectionService.GetByIdAsync("media_items", id);
+            _currentItem = doc as MediaItem;
+            if (_currentItem is not null)
+            {
+                _sizeLabel = FormatBytes(_currentItem.SizeBytes);
+                _uploadLabel = "Replace";
+            }
+        }
+        else
+        {
+            _currentItem = null;
+            _uploadLabel = "Upload File";
+        }
+    }
+
+    private async Task HandleUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        var ms = Field.MediaSettings;
+
+        if (ms?.MaxSizeBytes is not null && file.Size > ms.MaxSizeBytes)
+            return;
+
+        _uploading = true;
+
+        try
+        {
+            var maxSize = ms?.MaxSizeBytes ?? 100 * 1024 * 1024;
+            await using var stream = file.OpenReadStream(maxAllowedSize: maxSize);
+            var result = await MediaProvider.UploadAsync(stream, file.Name, file.ContentType);
+
+            var mediaFormValues = new Dictionary<string, string?>
+            {
+                ["FileName"] = file.Name,
+                ["FileKey"] = result.FileKey,
+                ["Url"] = result.PublicUrl,
+                ["ContentType"] = file.ContentType,
+                ["SizeBytes"] = result.SizeInBytes.ToString()
+            };
+
+            var created = await CollectionService.CreateAsync("media_items", mediaFormValues);
+            if (created.Errors.Count > 0) return;
+
+            var doc = await CollectionService.GetByIdAsync("media_items", created.Id);
+            _currentItem = doc as MediaItem;
+            if (_currentItem is not null)
+            {
+                _sizeLabel = FormatBytes(_currentItem.SizeBytes);
+                _uploadLabel = "Replace";
+            }
+            await ValueChanged.InvokeAsync(created.Id.ToString());
+        }
+        finally
+        {
+            _uploading = false;
+        }
+    }
+
+    private async Task Clear()
+    {
+        _currentItem = null;
+        _uploadLabel = "Upload File";
+        _sizeLabel = string.Empty;
+        await ValueChanged.InvokeAsync(null);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024):F1} MB";
+    }
+}

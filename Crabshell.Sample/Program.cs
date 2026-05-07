@@ -1,6 +1,7 @@
 using Crabshell.Admin;
 using Crabshell.Core;
 using Crabshell.Data;
+using Crabshell.Media.Local;
 using Crabshell.Sample.Components;
 using Radzen;
 
@@ -12,6 +13,9 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCrabshellCore(typeof(Program).Assembly);
+builder.Services.AddLocalMedia(
+    Path.Combine(builder.Environment.WebRootPath, "uploads"),
+    "/uploads");
 builder.Services.AddCrabshellData<CrabshellDb>(builder.Configuration.GetConnectionString("DefaultConnection")!);
 
 var app = builder.Build();

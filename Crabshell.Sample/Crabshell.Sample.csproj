@@ -16,6 +16,7 @@
       <ProjectReference Include="..\Crabshell.Core\Crabshell.Core.csproj" />
       <ProjectReference Include="..\Crabshell.Data\Crabshell.Data.csproj" />
       <ProjectReference Include="..\Crabshell.Admin\Crabshell.Admin.csproj" />
+      <ProjectReference Include="..\Crabshell.Media.Local\Crabshell.Media.Local.csproj" />
       <ProjectReference Include="..\Crabshell.SourceGenerator\Crabshell.SourceGenerator.csproj"
                         OutputItemType="Analyzer"
                         ReferenceOutputAssembly="false" />

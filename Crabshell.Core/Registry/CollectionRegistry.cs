@@ -196,6 +196,18 @@ public sealed class CollectionRegistry
                         "text",
                         v => v,
                         fieldType: FieldType.RichText));
+                
+                var mediaAttr = p.GetCustomAttribute<MediaFieldAttribute>();
+                if (mediaAttr is not null)
+                    fieldMetas.Add(CreateFieldMeta(p,
+                        mediaAttr,
+                        groupAttr,
+                        gridAttr,
+                        accessors,
+                        "uuid",
+                        v => Guid.TryParse(v, out var g) ? g : null,
+                        fieldType: FieldType.Media,
+                        mediaSettings: new MediaFieldSettings { MaxSizeBytes = mediaAttr.MaxSizeBytes, RelatedSlug = "media_items" }));
             }
             _collections[slug] = new CollectionMeta
             {
@@ -232,6 +244,7 @@ public sealed class CollectionRegistry
         RelationshipFieldSettings? relationshipSettings = null,
         BoolFieldSettings? boolSettings = null,
         DateTimeFieldSettings? dateTimeSettings = null,
+        MediaFieldSettings? mediaSettings = null,
         NumberFieldSettings? numberSettings = null) => new()
     {
         PropertyName = p.Name,
@@ -246,6 +259,7 @@ public sealed class CollectionRegistry
         RelationshipSettings = relationshipSettings,
         BoolSettings = boolSettings,
         DateTimeSettings = dateTimeSettings,
+        MediaSettings = mediaSettings,
         NumberSettings = numberSettings,
         GroupSettings = groupAttr is null ? null : new FieldGroupSettings { Name = groupAttr.Name, Sidebar = groupAttr.Sidebar },
         Getter = accessors.getter,

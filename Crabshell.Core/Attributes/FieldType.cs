@@ -8,5 +8,6 @@ public enum FieldType
     Bool,
     DateTime,
     Number,
-    RichText
+    RichText,
+    Media
 }
