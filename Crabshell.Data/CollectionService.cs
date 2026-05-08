@@ -1,16 +1,17 @@
 using Crabshell.Core.Documents;
 using Crabshell.Core.Registry;
+using Crabshell.Core.Repository;
 using Crabshell.Core.Services;
 
 namespace Crabshell.Data;
 
 public class CollectionService(CollectionRepositoryResolver resolver, CollectionRegistry registry) : ICollectionService
 {
-    public async Task<IQueryable<CrabshellDocument>> GetAllAsync(string slug)
+    public async Task<PagedResult> GetPageAsync(string slug, CollectionQuery query)
     {
         var collection = registry.Get(slug);
-        if (collection is null) return Enumerable.Empty<CrabshellDocument>().AsQueryable();
-        return await resolver.Resolve(collection).GetAllAsync(collection);
+        if (collection is null) return new PagedResult([], 0, query.Skip, query.Take);
+        return await resolver.Resolve(collection).GetPageAsync(collection, query);
     }
 
     public async Task<CrabshellDocument?> GetByIdAsync(string slug, Guid id)

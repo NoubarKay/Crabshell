@@ -5,7 +5,7 @@ namespace Crabshell.Core.Repository;
 
 public interface ICollectionRepository
 {
-    Task<IQueryable<CrabshellDocument>> GetAllAsync(CollectionMeta collection);
+    Task<PagedResult> GetPageAsync(CollectionMeta collection, CollectionQuery query);
     Task<CrabshellDocument?> GetByIdAsync(CollectionMeta collection, Guid id);
     Task<CrabshellDocument> CreateAsync(CrabshellDocument document);
     Task<CrabshellDocument> UpdateAsync(CrabshellDocument document);
