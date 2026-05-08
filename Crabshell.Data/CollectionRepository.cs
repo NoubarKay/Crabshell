@@ -18,7 +18,7 @@ public class CollectionRepository : ICollectionRepository
         DbContext = dbContext;
     }
 
-    protected IQueryable<CrabshellDocument> GetQueryable(CollectionMeta collection) =>
+    private IQueryable<CrabshellDocument> GetQueryable(CollectionMeta collection) =>
         (IQueryable<CrabshellDocument>)_setMethod
             .MakeGenericMethod(collection.ClrType)
             .Invoke(DbContext, null)!;
