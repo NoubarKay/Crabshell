@@ -6,11 +6,11 @@ namespace Crabshell.Data;
 
 public class CollectionService(CollectionRepositoryResolver resolver, CollectionRegistry registry) : ICollectionService
 {
-    public async Task<IQueryable<CrabshellDocument>> GetAllAsync(string slug)
+    public IQueryable<CrabshellDocument> GetAllAsync(string slug)
     {
         var collection = registry.Get(slug);
         if (collection is null) return Enumerable.Empty<CrabshellDocument>().AsQueryable();
-        return await resolver.Resolve(collection).GetAllAsync(collection);
+        return resolver.Resolve(collection).GetAllAsync(collection);
     }
 
     public async Task<CrabshellDocument?> GetByIdAsync(string slug, Guid id)

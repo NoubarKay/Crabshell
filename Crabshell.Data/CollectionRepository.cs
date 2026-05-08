@@ -17,12 +17,12 @@ public class CollectionRepository : ICollectionRepository
         DbContext = dbContext;
     }
 
-    protected IQueryable<CrabshellDocument> GetQueryable(CollectionMeta collection) =>
+    private IQueryable<CrabshellDocument> GetQueryable(CollectionMeta collection) =>
         (IQueryable<CrabshellDocument>)_setMethod
             .MakeGenericMethod(collection.ClrType)
             .Invoke(DbContext, null)!;
 
-    public virtual async Task<IQueryable<CrabshellDocument>> GetAllAsync(CollectionMeta collection) =>
+    public virtual IQueryable<CrabshellDocument> GetAllAsync(CollectionMeta collection) =>
         GetQueryable(collection);
 
     public virtual async Task<CrabshellDocument?> GetByIdAsync(
