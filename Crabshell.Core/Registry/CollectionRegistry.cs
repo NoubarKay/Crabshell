@@ -260,7 +260,7 @@ public sealed class CollectionRegistry
     };
 
     private static string ToSnakeCase(string name) =>
-        string.Concat(name.Select((c, i) => i > 0 && char.IsUpper(c) ? "_" + c : c.ToString()))
+        Regex.Replace(name, @"([a-z0-9])([A-Z])|([A-Z]+)([A-Z][a-z])", "$1$3_$2$4").ToLowerInvariant()
             .ToLowerInvariant();
     
     private static (Func<object, object?> getter, Action<object, object?> setter) BuildAccessors(
