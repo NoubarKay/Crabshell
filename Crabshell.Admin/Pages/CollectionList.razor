@@ -126,13 +126,13 @@
             return;
         }
 
-        IQueryable<CrabshellDocument> query = await CollectionService.GetAllAsync(Slug);
+        IQueryable<CrabshellDocument> query = CollectionService.GetAllAsync(Slug);
 
         relatedDocuments = new();
         foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship && f.GridVisible))
         {
             if (field.RelationshipSettings is null) continue;
-            relatedDocuments[field.PropertyName] = (await CollectionService.GetAllAsync(field.RelationshipSettings.Slug)).ToList();
+            relatedDocuments[field.PropertyName] = CollectionService.GetAllAsync(field.RelationshipSettings.Slug).ToList();
         }
 
         foreach (var f in args.Filters ?? Enumerable.Empty<FilterDescriptor>())
