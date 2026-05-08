@@ -1,4 +1,5 @@
 @page "/admin/collections/{Slug}"
+@using Crabshell.Core
 @using Crabshell.Core.Repository
 @layout Layout.AdminLayout
 @inject CollectionRegistry Registry
@@ -141,9 +142,14 @@
             Filters: filters
         );
 
-        var result = await CollectionService.GetPageAsync(Slug, collectionQuery);
-        documents = result.Items.ToList();
-        count = result.TotalCount;
+        var pageResult = await CollectionService.GetPageAsync(Slug, collectionQuery);
+        if (pageResult is not Result<PagedResult>.Ok { Value: var page })
+        {
+            isLoading = false;
+            return;
+        }
+        documents = page.Items.ToList();
+        count = page.TotalCount;
 
         relatedDocuments = new();
         foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship && f.GridVisible))
@@ -157,8 +163,8 @@
             var related = new List<CrabshellDocument>();
             foreach (var idStr in ids)
             {
-                var doc = await CollectionService.GetByIdAsync(field.RelationshipSettings.Slug, Guid.Parse(idStr!));
-                if (doc is not null) related.Add(doc);
+                var docResult = await CollectionService.GetByIdAsync(field.RelationshipSettings.Slug, Guid.Parse(idStr!));
+                if (docResult is Result<CrabshellDocument?>.Ok { Value: { } doc }) related.Add(doc);
             }
             relatedDocuments[field.PropertyName] = related;
         }

@@ -1,5 +1,6 @@
 @page "/admin/collections/{Slug}/new"
 @page "/admin/collections/{Slug}/{Id}"
+@using Crabshell.Core
 @using Crabshell.Core.Repository
 @using Crabshell.Core.SaveActions
 @layout Crabshell.Admin.Layout.AdminLayout
@@ -36,14 +37,14 @@
                       ButtonStyle="ButtonStyle.Base"
                       Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}"))" />
         
-        @if (collection.SaveOption == SaveOption.Save)
+        @if (collection?.SaveOption == SaveOption.Save)
         {
             <RadzenButton Text="Save"
                           ButtonStyle="ButtonStyle.Primary"
                           Disabled="@isSaving"
                           Click="@(() => OnSaveClick(null))" />
         }
-        else
+        else if (collection is not null)
         {
             <RadzenSplitButton Click="@OnSaveClick" Text="Save" Disabled="@isSaving" ButtonStyle="ButtonStyle.Primary">                                                                                                                                                                                                                                                                                                                    
                   <ChildContent>                                                                                                                                                                                                                                                                                                                                                                                                             
@@ -71,7 +72,13 @@
     </RadzenStack>
 </div>
 
-@if (document is not null && collection is not null)
+@if (notFound)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" Variant="Variant.Flat">
+        @(collection is null ? $"Collection \"{Slug}\" does not exist." : "Document not found.")
+    </RadzenAlert>
+}
+else @if (document is not null && collection is not null)
 {
     <RadzenStack Orientation="Orientation.Horizontal" Gap="20px" AlignItems="AlignItems.Start">
 
@@ -205,6 +212,7 @@
 
     private CollectionMeta? collection;
     private CrabshellDocument? document;
+    private bool notFound;
     private Dictionary<string, string?> formValues = new();
     private Dictionary<string, List<CrabshellDocument>> relatedDocuments = new();
     private List<ValidationError> validationErrors = [];
@@ -213,12 +221,24 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        notFound = false;
         collection = Registry.Get(Slug);
-        if (collection is null) return;
+        if (collection is null) { notFound = true; return; }
 
-        document = isNew
-            ? (CrabshellDocument)Activator.CreateInstance(collection.ClrType)!
-            : await CollectionService.GetByIdAsync(Slug, Guid.Parse(Id!));
+        if (isNew)
+        {
+            document = (CrabshellDocument)Activator.CreateInstance(collection.ClrType)!;
+        }
+        else
+        {
+            var docResult = await CollectionService.GetByIdAsync(Slug, Guid.Parse(Id!));
+            if (docResult is not Result<CrabshellDocument?>.Ok { Value: var doc } || doc is null)
+            {
+                notFound = true;
+                return;
+            }
+            document = doc;
+        }
 
         formValues = new();
         foreach (var field in collection.Fields)
@@ -228,13 +248,12 @@
                 ? dt.ToString("O")
                 : raw?.ToString();
         }
-        
+
         if (isNew)
         {
             foreach (var field in collection.Fields.Where(f => f.DefaultValue is not null))
                 formValues[field.PropertyName] = field.DefaultValue?.ToString();
         }
-
 
         relatedDocuments = new();
         foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship))
@@ -243,7 +262,8 @@
             var related = await CollectionService.GetPageAsync(
                 field.RelationshipSettings.Slug,
                 new CollectionQuery(Skip: 0, Take: 1000));
-            relatedDocuments[field.PropertyName] = related.Items.ToList();
+            if (related is Result<PagedResult>.Ok { Value: var page })
+                relatedDocuments[field.PropertyName] = page.Items.ToList();
         }
     }
 
@@ -377,27 +397,35 @@
     private async Task OnSaveClick(RadzenSplitButtonItem? item)
     {
         isSaving = true;
+        validationErrors = [];
 
         Guid savedId;
         if (isNew)
         {
-            var result = await CollectionService.CreateAsync(Slug, formValues);
-            validationErrors = result.Errors;
-            savedId = result.Id;
+            var createResult = await CollectionService.CreateAsync(Slug, formValues);
+            if (!TryUnwrapCreate(createResult, out savedId, out var createErrors))
+            {
+                validationErrors = createErrors;
+                isSaving = false;
+                return;
+            }
         }
         else
         {
-            validationErrors = await CollectionService.UpdateAsync(Slug, Guid.Parse(Id!), formValues);
+            var updateResult = await CollectionService.UpdateAsync(Slug, Guid.Parse(Id!), formValues);
+            if (!TryUnwrapUpdate(updateResult, out var updateErrors))
+            {
+                validationErrors = updateErrors;
+                isSaving = false;
+                return;
+            }
             savedId = Guid.Parse(Id!);
         }
 
         isSaving = false;
-        if (validationErrors.Count > 0) return;
-
         Notifications.Notify(NotificationSeverity.Success, "Saved", duration: 3000);
 
-        var custom = collection.CustomSaveActions.FirstOrDefault(x => x.Value == item?.Value);
-
+        var custom = collection!.CustomSaveActions.FirstOrDefault(x => x.Value == item?.Value);
         if (custom is not null)
         {
             var url = await custom.ExecuteAsync(new SaveActionContext(Slug, savedId, CollectionService, Services));
@@ -405,35 +433,53 @@
             return;
         }
 
-    switch (item?.Value)
+        switch (item?.Value)
         {
             case "stay":
                 Nav.NavigateTo($"/admin/collections/{Slug}/{savedId}", forceLoad: false);
                 break;
 
             case "clone":
-                var clone = await CollectionService.CreateAsync(Slug, formValues);
-                if (clone.Errors.Count > 0)
-                {
-                    validationErrors = clone.Errors;
-                    return;
-                }
-                Nav.NavigateTo($"/admin/collections/{Slug}/{clone.Id}");
+                var cloneResult = await CollectionService.CreateAsync(Slug, formValues);
+                if (TryUnwrapCreate(cloneResult, out var cloneId, out var cloneErrors))
+                    Nav.NavigateTo($"/admin/collections/{Slug}/{cloneId}");
+                else
+                    validationErrors = cloneErrors;
                 break;
 
             case "next":
-                // var all = (await CollectionService.GetAllAsync(Slug)).ToList();
-                // all.Reverse();
-                // var idx = all.FindIndex(d => d.Id == savedId);
-                // var next = idx >= 0 && idx + 1 < all.Count ? all[idx + 1] : null;
-                // Nav.NavigateTo(next is not null
-                //     ? $"/admin/collections/{Slug}/{next.Id}"
-                //     : $"/admin/collections/{Slug}");
+                // SaveAndGoToNext not yet implemented — see Linear backlog
                 break;
 
             default:
                 Nav.NavigateTo($"/admin/collections/{Slug}");
                 break;
         }
+    }
+
+    private static bool TryUnwrapCreate(
+        Result<(Guid Id, List<ValidationError> Errors)> result,
+        out Guid id,
+        out List<ValidationError> errors)
+    {
+        if (result is Result<(Guid Id, List<ValidationError> Errors)>.Invalid inv)
+        {
+            id = Guid.Empty; errors = inv.Errors; return false;
+        }
+        if (result is Result<(Guid Id, List<ValidationError> Errors)>.Ok { Value: var v })
+        {
+            if (v.Errors.Count > 0) { id = Guid.Empty; errors = v.Errors; return false; }
+            id = v.Id; errors = []; return true;
+        }
+        id = Guid.Empty; errors = []; return false;
+    }
+
+    private static bool TryUnwrapUpdate(
+        Result<List<ValidationError>> result,
+        out List<ValidationError> errors)
+    {
+        if (result is Result<List<ValidationError>>.Invalid inv) { errors = inv.Errors; return false; }
+        if (result is Result<List<ValidationError>>.Ok { Value: var v } && v.Count > 0) { errors = v; return false; }
+        errors = []; return true;
     }
 }
