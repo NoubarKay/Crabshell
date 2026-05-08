@@ -227,7 +227,7 @@ Control which actions appear on the edit page Save button via the `SaveOptions` 
 | `SaveOption.Save` | Navigate to the collection list after saving |
 | `SaveOption.SaveAndStayHere` | Stay on the edit page (updates the URL to the new ID if creating) |
 | `SaveOption.SaveAndClone` | Duplicate the document and open the clone for editing |
-| `SaveOption.SaveAndGoToNext` | Navigate to the next document in the list |
+| `SaveOption.SaveAndGoToNext` | Navigate to the next document in the list *(not yet implemented)* |
 
 For custom save behaviour (e.g. "Save and Publish"), see [Custom Save Actions](docs/custom-save-actions.md).
 

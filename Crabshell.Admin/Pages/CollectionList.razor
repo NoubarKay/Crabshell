@@ -1,5 +1,6 @@
 @page "/admin/collections/{Slug}"
-@layout Crabshell.Admin.Layout.AdminLayout
+@using Crabshell.Core.Repository
+@layout Layout.AdminLayout
 @inject CollectionRegistry Registry
 @inject ICollectionService CollectionService
 @inject NavigationManager Nav
@@ -126,81 +127,41 @@
             return;
         }
 
-        IQueryable<CrabshellDocument> query = CollectionService.GetAllAsync(Slug);
+        var filters = (args.Filters ?? Enumerable.Empty<FilterDescriptor>())
+            .Where(f => f.FilterValue is not null)
+            .Select(f => new FieldFilter(f.Property, MapOperator(f.FilterOperator), f.FilterValue))
+            .ToList();
+
+        var parts = args.OrderBy?.Split(' ');
+        var collectionQuery = new CollectionQuery(
+            Skip: args.Skip ?? 0,
+            Take: args.Top ?? 20,
+            OrderBy: parts?[0],
+            Descending: parts?.Length > 1 && parts[1].Equals("desc", StringComparison.OrdinalIgnoreCase),
+            Filters: filters
+        );
+
+        var result = await CollectionService.GetPageAsync(Slug, collectionQuery);
+        documents = result.Items.ToList();
+        count = result.TotalCount;
 
         relatedDocuments = new();
         foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship && f.GridVisible))
         {
             if (field.RelationshipSettings is null) continue;
-            relatedDocuments[field.PropertyName] = CollectionService.GetAllAsync(field.RelationshipSettings.Slug).ToList();
-        }
-
-        foreach (var f in args.Filters ?? Enumerable.Empty<FilterDescriptor>())
-        {
-            if(f.FilterValue is null) continue;
-
-            var fieldMeta = collection.Fields.FirstOrDefault(x => x.PropertyName == f.Property);
-            
-            if(fieldMeta is null) continue;
-
-            var param = Expression.Parameter(typeof(CrabshellDocument), "doc");
-            var prop = Expression.Property(Expression.Convert(param, collection.ClrType), f.Property);
-
-            var underlyingType = Nullable.GetUnderlyingType(fieldMeta.ClrType) ?? fieldMeta.ClrType;
-            var convertedValue = Convert.ChangeType(f.FilterValue, underlyingType);
-            var constant = Expression.Constant(convertedValue, fieldMeta.ClrType);
-            
-            Expression? body = f.FilterOperator switch
+            var ids = documents
+                .Select(d => field.Getter(d)?.ToString())
+                .Where(v => v is not null && Guid.TryParse(v, out _))
+                .Distinct()
+                .ToList();
+            var related = new List<CrabshellDocument>();
+            foreach (var idStr in ids)
             {
-                FilterOperator.Contains => Expression.Call(prop, nameof(string.Contains),    null, constant),
-                FilterOperator.DoesNotContain => Expression.Not(Expression.Call(prop, nameof(string.Contains), null, constant)),
-                FilterOperator.StartsWith => Expression.Call(prop, nameof(string.StartsWith),  null, constant),
-                FilterOperator.EndsWith => Expression.Call(prop, nameof(string.EndsWith),    null, constant),
-                FilterOperator.Equals => Expression.Equal(prop, constant),
-                FilterOperator.NotEquals => Expression.NotEqual(prop, constant),
-                FilterOperator.GreaterThan => Expression.GreaterThan(prop, constant),
-                FilterOperator.GreaterThanOrEquals => Expression.GreaterThanOrEqual(prop, constant),
-                FilterOperator.LessThan => Expression.LessThan(prop, constant),
-                FilterOperator.LessThanOrEquals => Expression.LessThanOrEqual(prop, constant),
-                _ => null
-            };
-            
-            if (body is null) continue;
-            query = query.Where(Expression.Lambda<Func<CrabshellDocument, bool>>(body, param));
-
-        }
-
-        if (!string.IsNullOrEmpty(args.OrderBy))
-        {
-            var parts = args.OrderBy.Split(' ');
-            var propName = parts[0];
-            var desc = parts.Length > 1 && parts[1].Equals("desc", StringComparison.OrdinalIgnoreCase);
-            var sortField = collection.Fields.FirstOrDefault(f => f.PropertyName == propName);
-            if (sortField is not null)
-            {
-                var param = Expression.Parameter(typeof(CrabshellDocument), "doc");
-                var keySelector = Expression.Lambda(
-                    Expression.Property(Expression.Convert(param, collection.ClrType), propName),
-                    param);
-                var orderMethod = desc ? "OrderByDescending" : "OrderBy";
-                var method = typeof(Queryable)
-                    .GetMethods()
-                    .First(m => m.Name == orderMethod && m.GetParameters().Length == 2)
-                    .MakeGenericMethod(typeof(CrabshellDocument), sortField.ClrType);
-                query = (IQueryable<CrabshellDocument>)method.Invoke(null, [query, keySelector])!;
+                var doc = await CollectionService.GetByIdAsync(field.RelationshipSettings.Slug, Guid.Parse(idStr!));
+                if (doc is not null) related.Add(doc);
             }
+            relatedDocuments[field.PropertyName] = related;
         }
-
-        IEnumerable<CrabshellDocument> result = query;
-
-        count = result.Count();
-
-
-        if (args.Skip != null && args.Top != null)
-            result = result.Skip(args.Skip.Value).Take(args.Top.Value);
-
-        
-        documents = result.ToList();
 
         isLoading = false;
     }
@@ -234,6 +195,21 @@
         await CollectionService.DeleteAsync(Slug, doc.Id);
         await LoadData(new LoadDataArgs());
     }
+
+    private static FieldFilterOperator MapOperator(FilterOperator op) => op switch
+    {
+        FilterOperator.Contains          => FieldFilterOperator.Contains,
+        FilterOperator.DoesNotContain    => FieldFilterOperator.DoesNotContain,
+        FilterOperator.StartsWith        => FieldFilterOperator.StartsWith,
+        FilterOperator.EndsWith          => FieldFilterOperator.EndsWith,
+        FilterOperator.Equals            => FieldFilterOperator.Equals,
+        FilterOperator.NotEquals         => FieldFilterOperator.NotEquals,
+        FilterOperator.GreaterThan       => FieldFilterOperator.GreaterThan,
+        FilterOperator.GreaterThanOrEquals => FieldFilterOperator.GreaterThanOrEquals,
+        FilterOperator.LessThan          => FieldFilterOperator.LessThan,
+        FilterOperator.LessThanOrEquals  => FieldFilterOperator.LessThanOrEquals,
+        _                                => FieldFilterOperator.Equals,
+    };
 
     private static readonly System.Text.RegularExpressions.Regex _htmlTagRegex =
         new(@"<[^>]*>", System.Text.RegularExpressions.RegexOptions.Compiled);

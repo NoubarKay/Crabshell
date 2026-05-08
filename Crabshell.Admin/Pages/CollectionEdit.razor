@@ -1,5 +1,6 @@
 @page "/admin/collections/{Slug}/new"
 @page "/admin/collections/{Slug}/{Id}"
+@using Crabshell.Core.Repository
 @using Crabshell.Core.SaveActions
 @layout Crabshell.Admin.Layout.AdminLayout
 @inject CollectionRegistry Registry
@@ -239,8 +240,10 @@
         foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship))
         {
             if (field.RelationshipSettings is null) continue;
-            relatedDocuments[field.PropertyName] =
-                (CollectionService.GetAllAsync(field.RelationshipSettings.Slug)).ToList();
+            var related = await CollectionService.GetPageAsync(
+                field.RelationshipSettings.Slug,
+                new CollectionQuery(Skip: 0, Take: 1000));
+            relatedDocuments[field.PropertyName] = related.Items.ToList();
         }
     }
 
@@ -419,13 +422,13 @@
                 break;
 
             case "next":
-                var all = (CollectionService.GetAllAsync(Slug)).ToList();
-                all.Reverse();
-                var idx = all.FindIndex(d => d.Id == savedId);
-                var next = idx >= 0 && idx + 1 < all.Count ? all[idx + 1] : null;
-                Nav.NavigateTo(next is not null
-                    ? $"/admin/collections/{Slug}/{next.Id}"
-                    : $"/admin/collections/{Slug}");
+                // var all = (await CollectionService.GetAllAsync(Slug)).ToList();
+                // all.Reverse();
+                // var idx = all.FindIndex(d => d.Id == savedId);
+                // var next = idx >= 0 && idx + 1 < all.Count ? all[idx + 1] : null;
+                // Nav.NavigateTo(next is not null
+                //     ? $"/admin/collections/{Slug}/{next.Id}"
+                //     : $"/admin/collections/{Slug}");
                 break;
 
             default:
