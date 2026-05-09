@@ -6,7 +6,7 @@ using Crabshell.Core.Services;
 
 namespace Crabshell.Data;
 
-public class CollectionService(CollectionRepositoryResolver resolver, CollectionRegistry registry) : ICollectionService
+public class CollectionService(CollectionRepositoryResolver resolver, CollectionRegistry registry, IDocumentFactory factory) : ICollectionService
 {
     public async Task<Result<PagedResult>> GetPageAsync(string slug, CollectionQuery query)
     {
@@ -36,6 +36,12 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
         return new Result<CrabshellDocument?>.Ok(doc);
     }
 
+    public Task<Result<CrabshellDocument>> NewAsync(string slug)
+    {
+        var collection = registry.Get(slug);
+        if (collection is null) return Task.FromResult<Result<CrabshellDocument>>(new Result<CrabshellDocument>.NotFound(slug));
+        return Task.FromResult<Result<CrabshellDocument>>(new Result<CrabshellDocument>.Ok(factory.Create(collection!)));
+    }
 
     public async Task<Result<(Guid Id, List<ValidationError> Errors)>> CreateAsync(string slug, Dictionary<string, string?> formValues)
     {
@@ -48,7 +54,7 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
         var relationshipErrors = await ValidateRelationshipsAsync(collection, formValues);
         if (relationshipErrors.Count > 0) return new Result<(Guid Id, List<ValidationError> Errors)>.Ok((Guid.Empty, relationshipErrors));
 
-        var document = (CrabshellDocument)Activator.CreateInstance(collection.ClrType)!;
+        var document = factory.Create(collection);
         MapFormValues(collection, document, formValues);
 
         await resolver.Resolve(collection).CreateAsync(document);

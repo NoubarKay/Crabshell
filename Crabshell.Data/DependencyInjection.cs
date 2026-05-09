@@ -1,3 +1,4 @@
+using Crabshell.Core;
 using Crabshell.Core.Repository;
 using Crabshell.Core.Services;
 using Crabshell.Data.Schema;
@@ -26,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<CollectionRepositoryResolver>();
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<ISchemaDiffService, SchemaDiffService>();
+        services.AddScoped<IDocumentFactory, DocumentFactory>();
 
         return services;
     }

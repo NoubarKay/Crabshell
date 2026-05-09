@@ -227,7 +227,9 @@ else @if (document is not null && collection is not null)
 
         if (isNew)
         {
-            document = (CrabshellDocument)Activator.CreateInstance(collection.ClrType)!;
+            var newResult = await CollectionService.NewAsync(Slug);
+            if (newResult is not Result<CrabshellDocument>.Ok { Value: var blank }) { notFound = true; return; }
+            document = blank;
         }
         else
         {
