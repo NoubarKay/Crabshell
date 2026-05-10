@@ -26,8 +26,9 @@ public abstract class IntegrationTestBase : IAsyncDisposable
             .ToArray();
 
         services.AddCrabshellCore(assemblies);
+        var dbName = Guid.NewGuid().ToString("N");
         services.AddCrabshellSqliteData<object>(
-            "DataSource=file:testdb?mode=memory&cache=shared",
+            $"DataSource=file:{dbName}?mode=memory&cache=shared",
             configureModel: null);
 
         Services = services.BuildServiceProvider();

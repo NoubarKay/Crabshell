@@ -36,6 +36,22 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
         return new Result<CrabshellDocument?>.Ok(doc);
     }
 
+    public async Task<Result<CrabshellDocument>> GetSingleAsync(string slug)
+    {
+        var collection = registry.Get(slug);
+        if (collection is null) return new Result<CrabshellDocument>.NotFound(slug);
+
+        var paged = await resolver.Resolve(collection).GetPageAsync(collection, new CollectionQuery(Skip: 0, Take: 1));
+
+        if (paged.Items.Count > 0)
+            return new Result<CrabshellDocument>.Ok(paged.Items[0]);
+
+        // Auto-create the singleton document on first access
+        var document = factory.Create(collection);
+        await resolver.Resolve(collection).CreateAsync(document);
+        return new Result<CrabshellDocument>.Ok(document);
+    }
+
     public Task<Result<CrabshellDocument>> NewAsync(string slug)
     {
         var collection = registry.Get(slug);

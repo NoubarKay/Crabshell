@@ -11,7 +11,7 @@ public partial class CrabshellDbContext(DbContextOptions<CrabshellDbContext> opt
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        var collections = registry.GetAll();
+        var collections = registry.GetAll().Concat(registry.GetAllSingles()).ToList();
 
         foreach (var collection in collections)
         {
