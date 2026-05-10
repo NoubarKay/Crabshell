@@ -3,12 +3,14 @@
 @using Crabshell.Core
 @using Crabshell.Core.Repository
 @using Crabshell.Core.SaveActions
+@using Crabshell.Core.Storage
 @layout Crabshell.Admin.Layout.AdminLayout
 @inject CollectionRegistry Registry
 @inject ICollectionService CollectionService
 @inject NavigationManager Nav
 @inject NotificationService Notifications
 @inject IServiceProvider Services
+@inject IStorageProvider? StorageProvider
 @rendermode InteractiveServer
 
 
@@ -375,6 +377,27 @@ else @if (document is not null && collection is not null)
             {
                 <RadzenHtmlEditor @bind-Value="formValues[field.PropertyName]"
                                   Style="height:300px;width:100%" />
+            }  else if (field.FieldType == FieldType.Media)
+            {
+                var ms = field.MediaSettings!;
+                var currentPath = formValues[field.PropertyName];
+
+                @if (StorageProvider is not null && !string.IsNullOrEmpty(currentPath))
+                {
+                    <div style="margin-bottom:8px">
+                        <img src="@StorageProvider.GetPublicUrl(currentPath)"
+                             style="max-height:160px;max-width:100%;border-radius:4px;object-fit:contain" />
+                        <RadzenButton Text="Clear" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                                      ButtonStyle="ButtonStyle.Danger"
+                                      Style="margin-top:6px;display:block"
+                                      Click="@(() => formValues[field.PropertyName] = null)" />
+                    </div>
+                }
+                <RadzenUpload Multiple="false"
+                              Accept="@ms.Accept"
+                              Change="@(args => OnMediaUpload(args, field.PropertyName, ms))"
+                              Style="width:100%"
+                              InputAttributes="@(new Dictionary<string,object>{ {"aria-label","select file"} })" />
             }
         </RadzenStack>;
     };
@@ -484,4 +507,33 @@ else @if (document is not null && collection is not null)
         if (result is Result<List<ValidationError>>.Ok { Value: var v } && v.Count > 0) { errors = v; return false; }
         errors = []; return true;
     }
+
+    private async Task OnMediaUpload(UploadChangeEventArgs args, string propertyName, MediaFieldSettings settings)
+    {
+        var file = args.Files.FirstOrDefault();
+        
+        if(file is null)  { return; }
+        long maxBytes = settings.MaxSizeMb * 1024L * 1024L;
+        if (file.Size > maxBytes)
+        {
+            Notifications.Notify(NotificationSeverity.Error,
+                "File too large", $"Max size is {settings.MaxSizeMb} MB", duration: 4000);
+            return;
+        }
+        
+        await using var stream = file.OpenReadStream(maxBytes);
+        var ext = Path.GetExtension(file.Name);
+        var path = $"{Slug}/{Guid.NewGuid()}{ext}";
+
+        if (StorageProvider is null)
+        {
+            Notifications.Notify(NotificationSeverity.Error, "Storage not configured", duration: 4000);
+            return;
+        }
+
+        var result = await StorageProvider.UploadAsync(path, stream, "application/octet-stream");
+        formValues[propertyName] = result.Path;
+        StateHasChanged();
+    }
+
 }
