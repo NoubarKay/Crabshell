@@ -2,6 +2,7 @@ using Crabshell.Admin;
 using Crabshell.Core;
 using Crabshell.Data;
 using Crabshell.Sample.Components;
+using Crabshell.Storage.Local;
 using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,7 +12,9 @@ builder.Services.AddRadzenComponents();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddCrabshellCore(typeof(Program).Assembly);
+builder.Services.AddCrabshellCore(typeof(Program).Assembly)
+    .AddCrabshellLocalStorage(opt => opt.RootPath = "wwwroot/uploads");
+
 builder.Services.AddCrabshellData<CrabshellDb>(builder.Configuration.GetConnectionString("DefaultConnection")!);
 
 var app = builder.Build();

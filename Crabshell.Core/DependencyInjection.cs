@@ -1,5 +1,6 @@
 using System.Reflection;
 using Crabshell.Core.Registry;
+using Crabshell.Core.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Crabshell.Core;
@@ -15,6 +16,12 @@ public static class DependencyInjection
         
         
         
+        return services;
+    }
+    
+    public static IServiceCollection UseCrabshellStorage<TProvider>(this IServiceCollection services) where TProvider : class, IStorageProvider
+    {
+        services.AddSingleton<IStorageProvider, TProvider>();
         return services;
     }
 }
