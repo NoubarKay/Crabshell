@@ -16,13 +16,10 @@
       <ProjectReference Include="..\Crabshell.Core\Crabshell.Core.csproj" />
       <ProjectReference Include="..\Crabshell.Data\Crabshell.Data.csproj" />
       <ProjectReference Include="..\Crabshell.Admin\Crabshell.Admin.csproj" />
-      <ProjectReference Include="..\Crabshell.SourceGenerator\Crabshell.SourceGenerator.csproj"
-                        OutputItemType="Analyzer"
-                        ReferenceOutputAssembly="false" />
-      <ProjectReference Include="..\Crabshell.Analyzers\Crabshell.Analyzers.csproj"
-                        OutputItemType="Analyzer"
-                        ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\Crabshell.SourceGenerator\Crabshell.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\Crabshell.Analyzers\Crabshell.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
       <ProjectReference Include="..\Crabshell.Storage.Local\Crabshell.Storage.Local.csproj" />
+      <ProjectReference Include="..\src\data\Crabshell.Data.Postgres\Crabshell.Data.Postgres.csproj" />
     </ItemGroup>
 
     <ItemGroup>

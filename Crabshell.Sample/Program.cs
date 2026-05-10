@@ -1,6 +1,7 @@
 using Crabshell.Admin;
 using Crabshell.Core;
 using Crabshell.Data;
+using Crabshell.Data.Postgres;
 using Crabshell.Sample.Components;
 using Crabshell.Storage.Local;
 using Radzen;
@@ -15,7 +16,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCrabshellCore(typeof(Program).Assembly)
     .UseCrabshellLocalStorage(opt => opt.RootPath = "wwwroot/uploads");
 
-builder.Services.AddCrabshellData<CrabshellDb>(builder.Configuration.GetConnectionString("DefaultConnection")!);
+builder.Services.AddCrabshellPostgresData<CrabshellDb>(builder.Configuration.GetConnectionString("DefaultConnection")!);
 
 var app = builder.Build();
 

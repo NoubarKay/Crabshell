@@ -1,10 +1,11 @@
 using Crabshell.Core.Attributes;
 using Crabshell.Core.Registry;
+using Crabshell.Core.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crabshell.Data.Schema;
 
-public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registry) : ISchemaDiffService
+public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registry, IDatabaseDialect dialect) : ISchemaDiffService
 {
     public async Task ApplyDiffAsync()
     {
@@ -24,12 +25,12 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
                 }
 
                 if (!existingColumns.Contains("is_deleted"))
-                    await db.Database.ExecuteSqlAsync(
-                        $"""ALTER TABLE "{collection.Slug}" ADD COLUMN IF NOT EXISTS "is_deleted" boolean NOT NULL DEFAULT false;""");
+                    await db.Database.ExecuteSqlRawAsync(
+                        dialect.AddColumnIfNotExists(collection.Slug, $"\"is_deleted\" {dialect.BoolType} NOT NULL DEFAULT false"));
 
                 if (!existingColumns.Contains("deleted_at"))
-                    await db.Database.ExecuteSqlAsync(
-                        $"""ALTER TABLE "{collection.Slug}" ADD COLUMN IF NOT EXISTS "deleted_at" timestamptz NULL;""");
+                    await db.Database.ExecuteSqlRawAsync(
+                        dialect.AddColumnIfNotExists(collection.Slug, $"\"deleted_at\" {dialect.TimestampType} NULL"));
             }
         }
 
@@ -79,11 +80,11 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
     {
         var columns = new List<string>
         {
-            "id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY",
-            "created_at timestamptz NOT NULL DEFAULT now()",
-            "updated_at timestamptz NOT NULL DEFAULT now()",
-            "is_deleted boolean NOT NULL DEFAULT false",
-            "deleted_at timestamptz NULL"
+            $"id {dialect.UuidType} NOT NULL DEFAULT {dialect.NewUuid()} PRIMARY KEY",
+            $"created_at {dialect.TimestampType} NOT NULL DEFAULT {dialect.Now()}",
+            $"updated_at {dialect.TimestampType} NOT NULL DEFAULT {dialect.Now()}",
+            $"is_deleted {dialect.BoolType} NOT NULL DEFAULT false",
+            $"deleted_at {dialect.TimestampType} NULL"
         };
 
         foreach (var field in collection.Fields)
@@ -101,13 +102,13 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
     private async Task AddColumnAsync(string tableName, FieldMeta field)
     {
         var columnDdl = BuildColumnDdl(field);
-        var sql = $"""ALTER TABLE "{tableName}" ADD COLUMN IF NOT EXISTS {columnDdl};""";
+        var sql = dialect.AddColumnIfNotExists(tableName, columnDdl);
         await db.Database.ExecuteSqlRawAsync(sql);
     }
 
-    private static string BuildColumnDdl(FieldMeta field)
+    private string BuildColumnDdl(FieldMeta field)
     {
-        var columnType = field.ColumnType;
+        var columnType = dialect.GetColumnType(field);
 
         // Bool is always NOT NULL DEFAULT false — CLR bool is never nullable
         if (field.FieldType == FieldType.Bool)
@@ -127,10 +128,10 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
         return $"\"{field.ColumnName}\" {columnType} NULL";
     }
 
-    private static string? GetDefaultValue(FieldMeta field) => field.FieldType switch
+    private string? GetDefaultValue(FieldMeta field) => field.FieldType switch
     {
         FieldType.Relationship => null,
-        FieldType.DateTime     => "now()",
+        FieldType.DateTime     => dialect.Now(),
         FieldType.Number       => "0",
         FieldType.Bool         => "false",
         FieldType.Select       => IsEnumBacked(field) ? "0" : "''",

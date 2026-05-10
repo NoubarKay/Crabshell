@@ -1,7 +1,6 @@
 using Crabshell.Core;
 using Crabshell.Core.Repository;
 using Crabshell.Core.Services;
-using Crabshell.Core.Storage;
 using Crabshell.Data.Schema;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +14,11 @@ public static class DependencyInjection
     public static IServiceCollection AddCrabshellData<TDb>(
         this IServiceCollection services,
         string connectionString,
-        Action<ModelBuilder>? configureModel = null) where TDb : class
+        Action<ModelBuilder>? configureModel,
+        Action<DbContextOptionsBuilder> configureDb) where TDb : class
     {
         services.AddSingleton(new CrabshellModelOptions { Configure = configureModel });
-        services.AddDbContext<CrabshellDbContext>(options =>
-            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+        services.AddDbContext<CrabshellDbContext>(configureDb);
 
         services.AddScoped<TDb>();
         services.AddScoped<ICollectionRepository, CollectionRepository>();
@@ -30,7 +29,7 @@ public static class DependencyInjection
 
         return services;
     }
-    
+
     public static async Task UseCrabshellDataAsync(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
@@ -46,6 +45,4 @@ public static class DependencyInjection
             await db.Database.MigrateAsync();
         }
     }
-
-
 }
