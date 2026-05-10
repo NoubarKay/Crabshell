@@ -11,5 +11,7 @@ public interface IDatabaseDialect
     string Now();
     string AddColumnIfNotExists(string table, string columnDdl);
     string GetColumnType(FieldMeta field);
+    string GetExistingColumnsQuery(string tableName);
+    int ColumnNameResultIndex { get; }
 
 }

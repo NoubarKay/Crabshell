@@ -18,6 +18,10 @@ public class SqliteDatabaseDialect : IDatabaseDialect
         return $"""ALTER TABLE "{table}" ADD COLUMN {columnDdl};""";
     }
 
+    public string GetExistingColumnsQuery(string tableName) =>
+        $"PRAGMA table_info({tableName})";
+    public int ColumnNameResultIndex => 1; // PRAGMA returns: cid, name, type, notnull, dflt_value, pk
+
     public string GetColumnType(FieldMeta field)
     {
         var clrType = Nullable.GetUnderlyingType(field.ClrType) ?? field.ClrType;

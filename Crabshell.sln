@@ -41,6 +41,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crabshell.Data.SqlServer", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crabshell.Data.Sqlite", "src\data\Crabshell.Data.Sqlite\Crabshell.Data.Sqlite.csproj", "{681AD4B0-5AB0-4093-A874-1A9935DF81BA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crabshell.Tests.Integration", "Crabshell.Tests.Integration\Crabshell.Tests.Integration.csproj", "{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -219,6 +221,18 @@ Global
 		{681AD4B0-5AB0-4093-A874-1A9935DF81BA}.Release|x64.Build.0 = Release|Any CPU
 		{681AD4B0-5AB0-4093-A874-1A9935DF81BA}.Release|x86.ActiveCfg = Release|Any CPU
 		{681AD4B0-5AB0-4093-A874-1A9935DF81BA}.Release|x86.Build.0 = Release|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Debug|x64.Build.0 = Debug|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Debug|x86.Build.0 = Debug|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Release|x64.ActiveCfg = Release|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Release|x64.Build.0 = Release|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Release|x86.ActiveCfg = Release|Any CPU
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -239,5 +253,6 @@ Global
 		{86CEF62A-4388-43C8-9AE9-89827D69142B} = {2E1BEE33-C982-4CFA-9E55-D7A0F4657DE9}
 		{24D2BD31-B162-402B-9DA7-5EF438B5F664} = {2E1BEE33-C982-4CFA-9E55-D7A0F4657DE9}
 		{681AD4B0-5AB0-4093-A874-1A9935DF81BA} = {2E1BEE33-C982-4CFA-9E55-D7A0F4657DE9}
+		{D78C9120-C546-47A1-AEFD-636B1FFA3D0D} = {1F624BFC-AF5E-4028-83D5-FD56FFF8C783}
 	EndGlobalSection
 EndGlobal

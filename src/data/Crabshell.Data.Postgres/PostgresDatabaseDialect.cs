@@ -17,6 +17,10 @@ public class PostgresDatabaseDialect : IDatabaseDialect
         return $"""ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {columnDdl};""";
     }
 
+    public string GetExistingColumnsQuery(string tableName) =>
+        $"SELECT column_name FROM information_schema.columns WHERE table_name = '{tableName}'";
+    public int ColumnNameResultIndex => 0;
+
     public string GetColumnType(FieldMeta field)
     {
         var clrType = Nullable.GetUnderlyingType(field.ClrType) ?? field.ClrType;

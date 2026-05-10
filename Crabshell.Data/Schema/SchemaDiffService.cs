@@ -55,19 +55,11 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
         try
         {
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = @tableName";
-
-            var param = cmd.CreateParameter();
-            param.ParameterName = "@tableName";
-            param.Value = tableName;
-            cmd.Parameters.Add(param);
+            cmd.CommandText = dialect.GetExistingColumnsQuery(tableName);
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
-                columns.Add(reader.GetString(0));
+                columns.Add(reader.GetString(dialect.ColumnNameResultIndex));
         }
         finally
         {
