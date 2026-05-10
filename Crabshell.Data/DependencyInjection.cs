@@ -1,11 +1,10 @@
 using Crabshell.Core;
 using Crabshell.Core.Repository;
 using Crabshell.Core.Services;
+using Crabshell.Core.Storage;
 using Crabshell.Data.Schema;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -46,5 +45,11 @@ public static class DependencyInjection
         {
             await db.Database.MigrateAsync();
         }
+    }
+
+    public static IServiceCollection UseCrabshellStorage<TProvider>(this IServiceCollection services) where TProvider : class, IStorageProvider
+    {
+        services.AddSingleton<IStorageProvider, TProvider>();
+        return services;
     }
 }
