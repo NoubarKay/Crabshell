@@ -37,7 +37,7 @@ public class Listing : CrabshellDocument
     public string? Headline { get; set; }
 
     // ── DETAILS ────────────────────────────────────────────
-    [GridOptions(Visible = false)]
+    [GridOptions(Visible = false, Sortable = false)]
     [FieldGroup("Details")]
     [TextField(MaxLength = -1, Label = "Description")]
     public string? Description { get; set; }

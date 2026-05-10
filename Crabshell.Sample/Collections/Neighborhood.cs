@@ -23,7 +23,7 @@ public class Neighborhood : CrabshellDocument
     [TextField(Required = true, MaxLength = 2, Label = "State")]
     public string State { get; set; } = default!;
 
-    [GridOptions(Visible = false)]
+    [GridOptions(Visible = false, Sortable = false)]
     [TextField(MaxLength = -1, Label = "Description")]
     public string? Description { get; set; }
 

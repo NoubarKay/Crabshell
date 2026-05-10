@@ -37,7 +37,7 @@ public class Agency : CrabshellDocument
     [NumberField(Label = "Founded", Min = 1800, Max = 2100, Step = "1")]
     public int? Founded { get; set; }
 
-    [GridOptions(Visible = false)]
+    [GridOptions(Visible = false, Sortable = false)]
     [TextField(MaxLength = -1, Label = "About")]
     public string? About { get; set; }
     
@@ -45,7 +45,7 @@ public class Agency : CrabshellDocument
     [RichTextField(Label = "Description")]
     public string? Description { get; set; }
     
-    [GridOptions(Visible = false)]
+    [GridOptions(Visible = false, Sortable = false)]
     [TextField(Label = "Address", MaxLength = -1)]
     public string? Address { get; set; }
 }

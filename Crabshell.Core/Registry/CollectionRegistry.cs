@@ -26,13 +26,16 @@ public sealed class CollectionRegistry
         foreach (var type in types)
         {
             var attribute = type.GetCustomAttribute<CollectionAttribute>();
-            var slug = attribute?.Slug ?? type.Name;
+            
+            if(attribute is null) continue;
+            
+            var slug = attribute.Slug ?? type.Name;
             var label = attribute?.Label ?? type.Name;
             var saveOptions = attribute.SaveOptions;
             
             //Check for custom save actions
-            var customSaveActions = BuildCustomSaveActions(attribute.CustomSaveOptions, type.Name);
-            var customBulkActions = BuildBulkActions(attribute.CustomBulkOptions, type.Name);
+            var customSaveActions = BuildCustomSaveActions(attribute?.CustomSaveOptions ?? [], type.Name);
+            var customBulkActions = BuildBulkActions(attribute?.CustomBulkOptions ?? [], type.Name);
 
 
             if (!_safeSlug.IsMatch(slug))

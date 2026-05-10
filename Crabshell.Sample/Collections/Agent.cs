@@ -32,7 +32,7 @@ public class Agent : CrabshellDocument
     public string? LicenseNumber { get; set; }
 
     // PROFILE
-    [GridOptions(Visible = false)]
+    [GridOptions(Visible = false, Sortable = false)]
     [FieldGroup("Profile", Sidebar = true)]
     [TextField(MaxLength = -1, Label = "Bio")]
     public string? Bio { get; set; }

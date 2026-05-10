@@ -24,11 +24,11 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
                 }
 
                 if (!existingColumns.Contains("is_deleted"))
-                    await db.Database.ExecuteSqlRawAsync(
+                    await db.Database.ExecuteSqlAsync(
                         $"""ALTER TABLE "{collection.Slug}" ADD COLUMN IF NOT EXISTS "is_deleted" boolean NOT NULL DEFAULT false;""");
 
                 if (!existingColumns.Contains("deleted_at"))
-                    await db.Database.ExecuteSqlRawAsync(
+                    await db.Database.ExecuteSqlAsync(
                         $"""ALTER TABLE "{collection.Slug}" ADD COLUMN IF NOT EXISTS "deleted_at" timestamptz NULL;""");
             }
         }
