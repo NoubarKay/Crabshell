@@ -9,8 +9,10 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
 {
     public async Task ApplyDiffAsync()
     {
+        var allCollections = registry.GetAll().Concat(registry.GetAllSingles()).ToList();
+
         // Pass 1: ensure all tables and columns exist before adding FK constraints
-        foreach (var collection in registry.GetAll())
+        foreach (var collection in allCollections)
         {
             var existingColumns = await GetExistingColumnsAsync(collection.Slug);
 
@@ -35,7 +37,7 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
         }
 
         // Pass 2: ensure FK constraints exist now that all tables are guaranteed present
-        foreach (var collection in registry.GetAll())
+        foreach (var collection in allCollections)
         {
             foreach (var field in collection.Fields.Where(f =>
                 f.FieldType == FieldType.Relationship && f.RelationshipSettings is not null))

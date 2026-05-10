@@ -13,4 +13,5 @@ public sealed class CollectionMeta
     public SaveOption SaveOption { get; init; }
     public IReadOnlyList<ICustomSaveAction>? CustomSaveActions { get; init; }
     public IReadOnlyList<IBulkAction>? CustomBulkOptions { get; init; }
+    public bool IsSingle { get; init; }
 }

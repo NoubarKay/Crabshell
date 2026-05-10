@@ -1,6 +1,15 @@
 @inject CollectionRegistry Registry
 
 <RadzenPanelMenu>
+    @if (Registry.GetAllSingles().Any())
+    {
+        <RadzenPanelMenuItem Text="Singles" Icon="settings" Expanded="true">
+            @foreach (var single in Registry.GetAllSingles())
+            {
+                <RadzenPanelMenuItem Text="@single.Label" Path="@($"/admin/singles/{single.Slug}")" />
+            }
+        </RadzenPanelMenuItem>
+    }
     <RadzenPanelMenuItem Text="Collections" Icon="folder" Expanded="true">
         @foreach (var collection in Registry.GetAll())
         {

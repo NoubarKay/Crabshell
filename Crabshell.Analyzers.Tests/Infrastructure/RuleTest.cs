@@ -94,6 +94,14 @@ public static class RuleTest<TAnalyzer> where TAnalyzer : DiagnosticAnalyzer, ne
             public CollectionAttribute(string name) => Name = name;
         }
 
+        [AttributeUsage(AttributeTargets.Class)]
+        public sealed class SingleAttribute : Attribute
+        {
+            public string Slug { get; }
+            public string? Label { get; set; }
+            public SingleAttribute(string slug) => Slug = slug;
+        }
+
         public abstract class CrabshellDocument
         {
             public Guid Id { get; set; }

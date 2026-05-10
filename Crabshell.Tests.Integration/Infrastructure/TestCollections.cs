@@ -1,6 +1,7 @@
 using Crabshell.Core.Attributes;
 using Crabshell.Core.Attributes.Fields;
 using Crabshell.Core.Documents;
+using SingleAttribute = Crabshell.Core.Attributes.SingleAttribute;
 
 namespace Crabshell.Tests.Integration.Infrastructure;
 
@@ -31,4 +32,14 @@ public class Author : CrabshellDocument
 
     [TextField(Label = "Bio", MaxLength = -1)]
     public string? Bio { get; set; }
+}
+
+[Single("site_settings", Label = "Site Settings")]
+public class SiteSettings : CrabshellDocument
+{
+    [TextField(Label = "Site Name", MaxLength = 255)]
+    public string SiteName { get; set; } = default!;
+
+    [TextField(Label = "Tagline", MaxLength = 255)]
+    public string? Tagline { get; set; }
 }

@@ -33,6 +33,5 @@ public sealed class FieldMeta
     public int GridOrder { get; init; } = 0;
     
     // Database
-    public required string ColumnType { get; init; }
     public Func<string?, object?> FormValueParser { get; init; } = v => v;
 }
