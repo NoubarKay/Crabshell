@@ -3,8 +3,13 @@ using Crabshell.Core.Registry;
 
 namespace Crabshell.Core.Services;
 
+/// <summary>Validates raw form values against the field rules declared on a collection.</summary>
 public static class CollectionValidator
 {
+    /// <summary>
+    /// Validates <paramref name="formValues"/> against the field rules in <paramref name="collection"/>.
+    /// Returns an empty list when all values are valid, or one <see cref="ValidationError"/> per failing field.
+    /// </summary>
     public static List<ValidationError> Validate(
         CollectionMeta collection,
         Dictionary<string, string?> formValues)

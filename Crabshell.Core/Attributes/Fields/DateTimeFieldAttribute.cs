@@ -1,5 +1,9 @@
 namespace Crabshell.Core.Attributes.Fields;
 
+/// <summary>
+/// Maps to a <c>date</c>, <c>timestamptz</c>, or <c>timetz</c> column depending on options.
+/// Renders a date/time picker in the admin UI.
+/// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 public sealed class DateTimeFieldAttribute : CrabshellFieldAttribute
 {

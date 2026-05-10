@@ -18,10 +18,19 @@ public sealed class CollectionAttribute : Attribute
     /// </summary>
     public string? Label { get; set; }
     
+    /// <summary>Flags controlling which built-in save actions appear in the edit page split button. Default <see cref="SaveOption.Save"/>.</summary>
     public SaveOption SaveOptions { get; set; } = SaveOption.Save;
 
+    /// <summary>
+    /// Custom save action types added to the split button after built-in entries.
+    /// Each type must implement <see cref="SaveActions.ICustomSaveAction"/> and have a public parameterless constructor.
+    /// </summary>
     public Type[] CustomSaveOptions { get; set; } = [];
-    
+
+    /// <summary>
+    /// Custom bulk action types shown in the Actions button on the collection list.
+    /// Each type must implement <see cref="BulkActions.IBulkAction"/> and have a public parameterless constructor.
+    /// </summary>
     public Type[] CustomBulkOptions { get; set; } = [];
  
     public CollectionAttribute(string slug)
@@ -33,11 +42,16 @@ public sealed class CollectionAttribute : Attribute
     }
 }
 
+/// <summary>Flags controlling which save actions appear in the edit page split button.</summary>
 [Flags]
 public enum SaveOption
 {
+    /// <summary>Navigate to the collection list after saving.</summary>
     Save,
+    /// <summary>Stay on the edit page after saving (updates the URL to the new ID when creating).</summary>
     SaveAndStayHere,
+    /// <summary>Duplicate the saved document and open the clone for editing.</summary>
     SaveAndClone,
+    /// <summary>Navigate to the next document in the list after saving.</summary>
     SaveAndGoToNext
 }

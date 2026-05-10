@@ -24,6 +24,7 @@ public sealed class NumberFieldAttribute : CrabshellFieldAttribute
 
     /// <summary>Text shown after the input (e.g. "%"). Admin UI only.</summary>
     public string? Suffix { get; set; }
-    
+
+    /// <summary>Display format string applied to the rendered value, e.g. <c>"N2"</c>.</summary>
     public string? Format { get; set; }
 }
