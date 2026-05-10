@@ -21,14 +21,7 @@ Edit `Crabshell.Sample/appsettings.json`:
 
 Also update the hardcoded connection string in `Crabshell.Sample/CrabshellDbContextFactory.cs` to match.
 
-**2. Run migrations**
-
-```bash
-cd Crabshell.Sample
-dotnet ef database update
-```
-
-**3. Register Crabshell in `Program.cs`**
+**2. Register Crabshell in `Program.cs`**
 
 ```csharp
 builder.Services.AddCrabshellCore(typeof(Program).Assembly);
@@ -41,7 +34,9 @@ app.MapCrabshellAdmin();
 await app.UseCrabshellDataAsync();
 ```
 
-**4. Run the app**
+In development, `UseCrabshellDataAsync` automatically creates and migrates tables for any new collections. In production, standard EF Core migrations are used instead.
+
+**3. Run the app**
 
 ```bash
 dotnet run
@@ -77,7 +72,7 @@ public class Article : CrabshellDocument
 public enum ArticleStatus { Draft, Published, Archived }
 ```
 
-Collections are picked up automatically from the assembly passed to `AddCrabshellCore`. After adding a new collection, create and apply a migration:
+Collections are picked up automatically from the assembly passed to `AddCrabshellCore`. In development, tables are created at startup automatically. In production, run migrations:
 
 ```bash
 dotnet ef migrations add AddArticles
@@ -92,7 +87,29 @@ dotnet ef database update
 | `Label` | `string?` | Human-readable name shown in the admin UI. Defaults to the slug |
 | `SaveOptions` | `SaveOption` | Flags controlling which save actions appear in the edit page button |
 | `CustomSaveOptions` | `Type[]` | Custom save action types added to the split button — see [Custom Save Actions](docs/custom-save-actions.md) |
-| `CustomBulkOptions` | `Type[]` | Bulk action types shown in the Actions button on the collection list — see [Custom Bulk Actions](docs/bulk-actions.md) |
+| `CustomBulkOptions` | `Type[]` | Bulk action types shown in the Actions button on the collection list — see [Bulk Actions](docs/bulk-actions.md) |
+
+---
+
+## Singleton documents
+
+Use `[Single]` for content that only ever has one instance — site settings, homepage content, global navigation, etc.
+
+```csharp
+[Single("site_settings", Label = "Site Settings")]
+public class SiteSettings : CrabshellDocument
+{
+    [TextField(MaxLength = 100, Label = "Site Name")]
+    public string? SiteName { get; set; }
+
+    [TextField(MaxLength = 160, Label = "Meta Description")]
+    public string? MetaDescription { get; set; }
+}
+```
+
+The admin sidebar links directly to the edit page — there is no list view. The document is created automatically on first access if it doesn't exist.
+
+See [Singleton Documents](docs/singleton-documents.md) for the full reference.
 
 ---
 
@@ -114,6 +131,17 @@ Maps to a `varchar` or `text` column.
 | `MaxLength` | `255` | Max character length. `-1` = unlimited (`text` column) |
 | `MinLength` | `0` | Minimum character length |
 | `Pattern` | `null` | Regex pattern validated on save |
+
+### `[RichTextField]`
+
+Maps to a `text` column. Renders a full rich text editor (HTML output) in the admin.
+
+No additional options beyond `Label` and `Required`.
+
+```csharp
+[RichTextField(Label = "Description")]
+public string? Description { get; set; }
+```
 
 ### `[NumberField]`
 
@@ -144,7 +172,6 @@ Maps to an `integer` (enum) or `varchar(255)` (string options) column.
 | Option | Default | Description |
 |---|---|---|
 | `Options` | `[]` | Explicit string options. Ignored if the property type is an enum |
-| `Multiple` | `false` | Allow multiple selections |
 
 When the property type is an enum, options are derived automatically from the enum member names.
 
@@ -178,6 +205,20 @@ public Guid? AgencyId { get; set; }
 ```
 
 The dropdown in the admin UI is populated from the related collection and filtered by the first `[TextField]` on that type.
+
+### `[MediaField]`
+
+Stores a file path as a `varchar` column. Renders a file upload widget with drag-and-drop, preview, and clear in the admin. Requires a storage provider to be registered — see [Media Fields & Storage](docs/media-fields.md).
+
+```csharp
+[MediaField(Label = "Hero Image", Accept = "image/*", MaxSizeMb = 10)]
+public string? HeroImagePath { get; set; }
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `Accept` | `"image/*"` | HTML `accept` attribute, e.g. `"image/*"` or `".pdf,.docx"` |
+| `MaxSizeMb` | `10` | Maximum upload size in MB, enforced client-side and server-side |
 
 ---
 
@@ -230,6 +271,46 @@ Control which actions appear on the edit page Save button via the `SaveOptions` 
 | `SaveOption.SaveAndGoToNext` | Navigate to the next document in the list *(not yet implemented)* |
 
 For custom save behaviour (e.g. "Save and Publish"), see [Custom Save Actions](docs/custom-save-actions.md).
+
+---
+
+## Storage
+
+Media fields require a storage provider. Register one in `Program.cs`:
+
+```csharp
+// Local filesystem (development)
+builder.Services.UseCrabshellLocalStorage(opts =>
+{
+    opts.RootPath = "wwwroot/uploads";
+});
+
+// Azure Blob Storage
+builder.Services.UseCrabshellAzureStorage(opts =>
+{
+    opts.ConnectionString = "...";
+    opts.Container = "media";
+    opts.CdnUrl = "https://cdn.example.com"; // optional
+});
+
+// AWS S3
+builder.Services.UseCrabshellS3Storage(opts =>
+{
+    opts.BucketName = "my-bucket";
+    opts.Region = "us-east-1";
+    opts.CloudFrontUrl = "https://cdn.example.com"; // optional
+});
+
+// Google Cloud Storage
+builder.Services.UseCrabshellGcsStorage(opts =>
+{
+    opts.BucketName = "my-bucket";
+    opts.CredentialsJson = "..."; // optional, uses ADC if omitted
+    opts.CdnUrl = "https://cdn.example.com"; // optional
+});
+```
+
+See [Media Fields & Storage](docs/media-fields.md) for the full reference.
 
 ---
 

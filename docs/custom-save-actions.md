@@ -33,7 +33,7 @@ public class PublishAction : ICustomSaveAction
     public async Task<string?> ExecuteAsync(SaveActionContext ctx)
     {
         var publishSvc = ctx.Services.GetRequiredService<IPublishService>();
-        await publishSvc.PublishAsync(ctx.Slug, ctx.SavedId);
+        await publishSvc.PublishAsync(ctx.Slug, ctx.SaveId);
 
         return null; // null → navigate to collection list
     }
@@ -45,7 +45,7 @@ public class PublishAction : ICustomSaveAction
 | Property | Type | Description |
 |---|---|---|
 | `Slug` | `string` | The collection slug, e.g. `"articles"` |
-| `SavedId` | `Guid` | ID of the document that was just saved |
+| `SaveId` | `Guid` | ID of the document that was just saved |
 | `CollectionService` | `ICollectionService` | Built-in service for CRUD operations |
 | `Services` | `IServiceProvider` | Full DI container — use `GetRequiredService<T>()` to resolve anything else |
 
@@ -93,7 +93,7 @@ public class PublishAction : ICustomSaveAction
     public async Task<string?> ExecuteAsync(SaveActionContext ctx)
     {
         var svc = ctx.Services.GetRequiredService<IPublishService>();
-        await svc.PublishAsync(ctx.SavedId);
+        await svc.PublishAsync(ctx.SaveId);
         return null;
     }
 }
@@ -107,7 +107,7 @@ public class ArchiveAction : ICustomSaveAction
     public async Task<string?> ExecuteAsync(SaveActionContext ctx)
     {
         var svc = ctx.Services.GetRequiredService<IArchiveService>();
-        await svc.ArchiveAsync(ctx.SavedId);
+        await svc.ArchiveAsync(ctx.SaveId);
         // Navigate to a specific page after archiving
         return $"/admin/collections/{ctx.Slug}?filter=archived";
     }
