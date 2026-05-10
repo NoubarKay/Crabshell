@@ -34,21 +34,6 @@ public class LocalStorageProvider(IOptions<LocalStorageOptions> options) : IStor
         return new StorageResult(relativePath, GetPublicUrl(relativePath), fileStream.Length);
     }
 
-    public async Task<Stream> DownloadAsync(string path, CancellationToken ct = default)
-    {
-        var exists = await ExistsAsync(path, ct);
-
-        if (!exists)
-        {
-            throw new InvalidOperationException("Invalid path.");
-        }
-        
-        var rootPath = Path.GetFullPath(options.Value.RootPath);                                                                                                                                                
-        var uploadPath = Path.GetFullPath(Path.Combine(rootPath, path));      
-        
-        return File.OpenRead(uploadPath);
-    }
-
     public async Task DeleteAsync(string path, CancellationToken ct = default)
     {
         var exists = await ExistsAsync(path, ct);

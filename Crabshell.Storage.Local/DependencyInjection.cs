@@ -5,7 +5,7 @@ namespace Crabshell.Storage.Local;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddCrabshellLocalStorage(
+    public static IServiceCollection UseCrabshellLocalStorage(
         this IServiceCollection services,
         Action<LocalStorageOptions>? configure = null)
     {

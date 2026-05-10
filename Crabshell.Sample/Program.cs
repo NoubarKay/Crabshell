@@ -13,7 +13,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCrabshellCore(typeof(Program).Assembly)
-    .AddCrabshellLocalStorage(opt => opt.RootPath = "wwwroot/uploads");
+    .UseCrabshellLocalStorage(opt => opt.RootPath = "wwwroot/uploads");
 
 builder.Services.AddCrabshellData<CrabshellDb>(builder.Configuration.GetConnectionString("DefaultConnection")!);
 

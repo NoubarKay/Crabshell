@@ -27,6 +27,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Storage", "Storage", "{0320
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crabshell.Storage.Local", "Crabshell.Storage.Local\Crabshell.Storage.Local.csproj", "{DF72DFDD-08E0-44AD-9D31-9DD39E77775B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crabshell.Storage.Azure", "Crabshell.Storage.Azure\Crabshell.Storage.Azure.csproj", "{D644EDE4-28DB-4E6E-BCEE-3860713A7665}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,6 +135,18 @@ Global
 		{DF72DFDD-08E0-44AD-9D31-9DD39E77775B}.Release|x64.Build.0 = Release|Any CPU
 		{DF72DFDD-08E0-44AD-9D31-9DD39E77775B}.Release|x86.ActiveCfg = Release|Any CPU
 		{DF72DFDD-08E0-44AD-9D31-9DD39E77775B}.Release|x86.Build.0 = Release|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Debug|x64.Build.0 = Debug|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Debug|x86.Build.0 = Debug|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Release|x64.ActiveCfg = Release|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Release|x64.Build.0 = Release|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Release|x86.ActiveCfg = Release|Any CPU
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -146,5 +160,6 @@ Global
 		{80AA36EE-B1F9-4DEB-B99A-E986AF6D2336} = {E3A0ECE7-DA19-48E1-B0B0-0D58EDEFAC05}
 		{0320CFD5-0037-4495-917F-596BC14FDDC0} = {E3A0ECE7-DA19-48E1-B0B0-0D58EDEFAC05}
 		{DF72DFDD-08E0-44AD-9D31-9DD39E77775B} = {0320CFD5-0037-4495-917F-596BC14FDDC0}
+		{D644EDE4-28DB-4E6E-BCEE-3860713A7665} = {0320CFD5-0037-4495-917F-596BC14FDDC0}
 	EndGlobalSection
 EndGlobal
