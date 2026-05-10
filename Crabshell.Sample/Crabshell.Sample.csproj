@@ -22,6 +22,7 @@
       <ProjectReference Include="..\Crabshell.Analyzers\Crabshell.Analyzers.csproj"
                         OutputItemType="Analyzer"
                         ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\Crabshell.Storage.Local\Crabshell.Storage.Local.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -47,9 +47,5 @@ public static class DependencyInjection
         }
     }
 
-    public static IServiceCollection UseCrabshellStorage<TProvider>(this IServiceCollection services) where TProvider : class, IStorageProvider
-    {
-        services.AddSingleton<IStorageProvider, TProvider>();
-        return services;
-    }
+
 }
