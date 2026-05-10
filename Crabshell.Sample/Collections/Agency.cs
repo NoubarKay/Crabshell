@@ -48,4 +48,8 @@ public class Agency : CrabshellDocument
     [GridOptions(Visible = false, Sortable = false)]
     [TextField(Label = "Address", MaxLength = -1)]
     public string? Address { get; set; }
+
+    [GridOptions(Visible = false, Sortable = false)]
+    [MediaField(Label = "Logo", Accept = "image/*", MaxSizeMb = 5)]
+    public string? Logo { get; set; }
 }

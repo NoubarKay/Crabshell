@@ -21,6 +21,7 @@ public sealed class FieldMeta
     public BoolFieldSettings? BoolSettings { get; init; }
     public DateTimeFieldSettings? DateTimeSettings { get; init; }
     public NumberFieldSettings? NumberSettings { get; init; }
+    public MediaFieldSettings? MediaSettings { get; init; }
 
     // Layout
     public FieldGroupSettings? GroupSettings { get; init; }

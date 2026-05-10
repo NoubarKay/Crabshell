@@ -56,6 +56,7 @@ public sealed class CollectionRegistry
                     p.GetCustomAttribute<DateTimeFieldAttribute>() is not null,
                     p.GetCustomAttribute<NumberFieldAttribute>() is not null,
                     p.GetCustomAttribute<RichTextFieldAttribute>() is not null,
+                    p.GetCustomAttribute<MediaFieldAttribute>() is not null,
                 }.Count(x => x);
 
                 if (fieldAttrCount > 1)
@@ -188,6 +189,17 @@ public sealed class CollectionRegistry
                         accessors,
                         v => v,
                         fieldType: FieldType.RichText));
+
+                var mediaAttr = p.GetCustomAttribute<MediaFieldAttribute>();
+                if (mediaAttr is not null)
+                    fieldMetas.Add(CreateFieldMeta(p,
+                        mediaAttr,
+                        groupAttr,
+                        gridAttr,
+                        accessors,
+                        v => v,
+                        fieldType: FieldType.Media,
+                        mediaSettings: new MediaFieldSettings { Accept = mediaAttr.Accept, MaxSizeMb = mediaAttr.MaxSizeMb }));
             }
             _collections[slug] = new CollectionMeta
             {
@@ -229,6 +241,7 @@ public sealed class CollectionRegistry
                     p.GetCustomAttribute<DateTimeFieldAttribute>() is not null,
                     p.GetCustomAttribute<NumberFieldAttribute>() is not null,
                     p.GetCustomAttribute<RichTextFieldAttribute>() is not null,
+                    p.GetCustomAttribute<MediaFieldAttribute>() is not null,
                 }.Count(x => x);
 
                 if (fieldAttrCount > 1)
@@ -330,6 +343,13 @@ public sealed class CollectionRegistry
                     fieldMetas.Add(CreateFieldMeta(p, richTextAttr, groupAttr, gridAttr, accessors,
                         v => v,
                         fieldType: FieldType.RichText));
+
+                var mediaAttr = p.GetCustomAttribute<MediaFieldAttribute>();
+                if (mediaAttr is not null)
+                    fieldMetas.Add(CreateFieldMeta(p, mediaAttr, groupAttr, gridAttr, accessors,
+                        v => v,
+                        fieldType: FieldType.Media,
+                        mediaSettings: new MediaFieldSettings { Accept = mediaAttr.Accept, MaxSizeMb = mediaAttr.MaxSizeMb }));
             }
 
             _collections[slug] = new CollectionMeta
@@ -370,7 +390,8 @@ public sealed class CollectionRegistry
         RelationshipFieldSettings? relationshipSettings = null,
         BoolFieldSettings? boolSettings = null,
         DateTimeFieldSettings? dateTimeSettings = null,
-        NumberFieldSettings? numberSettings = null) => new()
+        NumberFieldSettings? numberSettings = null,
+        MediaFieldSettings? mediaSettings = null) => new()
     {
         PropertyName = p.Name,
         ColumnName = ToSnakeCase(p.Name),
@@ -385,6 +406,7 @@ public sealed class CollectionRegistry
         BoolSettings = boolSettings,
         DateTimeSettings = dateTimeSettings,
         NumberSettings = numberSettings,
+        MediaSettings = mediaSettings,
         GroupSettings = groupAttr is null ? null : new FieldGroupSettings { Name = groupAttr.Name, Sidebar = groupAttr.Sidebar },
         Getter = accessors.getter,
         Setter = accessors.setter,
