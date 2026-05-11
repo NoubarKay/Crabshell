@@ -28,6 +28,9 @@ public sealed class CollectionMeta
     /// <summary>Custom bulk actions available on the collection list. <c>null</c> if none.</summary>
     public IReadOnlyList<IBulkAction>? CustomBulkOptions { get; init; }
 
+    /// <summary>Hook types registered for this collection, in declaration order. <c>null</c> if none.</summary>
+    public IReadOnlyList<Type>? HookTypes { get; init; }
+
     /// <summary><c>true</c> when this collection was declared with <c>[Single]</c> and has exactly one document.</summary>
     public bool IsSingle { get; init; }
 }

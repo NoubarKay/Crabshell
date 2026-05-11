@@ -20,7 +20,8 @@ public static class DependencyInjection
             collectionRegistry.Register(assembly);
         services.AddSingleton(collectionRegistry);
 
-
+        foreach (var hookType in collectionRegistry.GetAllHookTypes())
+            services.AddScoped(hookType);
 
         return services;
     }

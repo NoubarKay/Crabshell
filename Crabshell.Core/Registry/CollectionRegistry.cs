@@ -5,6 +5,7 @@ using Crabshell.Core.Attributes;
 using Crabshell.Core.Attributes.Fields;
 using Crabshell.Core.BulkActions;
 using Crabshell.Core.Documents;
+using Crabshell.Core.Hooks;
 using Crabshell.Core.SaveActions;
 
 namespace Crabshell.Core.Registry;
@@ -36,6 +37,7 @@ public sealed class CollectionRegistry
             //Check for custom save actions
             var customSaveActions = BuildCustomSaveActions(attribute?.CustomSaveOptions ?? [], type.Name);
             var customBulkActions = BuildBulkActions(attribute?.CustomBulkOptions ?? [], type.Name);
+            var hookTypes = ValidateHookTypes(attribute?.Hooks ?? [], type.Name, type);
 
 
             if (!_safeSlug.IsMatch(slug))
@@ -210,6 +212,7 @@ public sealed class CollectionRegistry
                 SaveOption        = saveOptions,
                 CustomSaveActions = customSaveActions.AsReadOnly(),
                 CustomBulkOptions = customBulkActions.AsReadOnly(),
+                HookTypes         = hookTypes.Count > 0 ? hookTypes.AsReadOnly() : null,
                 IsSingle          = false,
             };
         }
@@ -376,6 +379,13 @@ public sealed class CollectionRegistry
 
     public IReadOnlyList<CollectionMeta> GetAllSingles() =>
         _collections.Values.Where(c => c.IsSingle).ToList().AsReadOnly();
+
+    public IReadOnlyList<Type> GetAllHookTypes() =>
+        _collections.Values
+            .SelectMany(m => m.HookTypes ?? [])
+            .Distinct()
+            .ToList()
+            .AsReadOnly();
     
     private static FieldMeta CreateFieldMeta(
         PropertyInfo p,
@@ -444,6 +454,27 @@ public sealed class CollectionRegistry
         return (getter, setter);
     }
     
+    private static List<Type> ValidateHookTypes(Type[] types, string collectionTypeName, Type documentType)
+    {
+        var beforeDef = typeof(IBeforeSaveHook<>);
+        var afterDef  = typeof(IAfterSaveHook<>);
+        var beforeIface = beforeDef.MakeGenericType(documentType);
+        var afterIface  = afterDef.MakeGenericType(documentType);
+
+        foreach (var hookType in types)
+        {
+            var implementsBefore = beforeIface.IsAssignableFrom(hookType);
+            var implementsAfter  = afterIface.IsAssignableFrom(hookType);
+
+            if (!implementsBefore && !implementsAfter)
+                throw new InvalidOperationException(
+                    $"'{hookType.Name}' on '{collectionTypeName}' must implement " +
+                    $"IBeforeSaveHook<{documentType.Name}> or IAfterSaveHook<{documentType.Name}>.");
+        }
+
+        return [..types];
+    }
+
     private static readonly HashSet<string> _reservedSaveValues = ["stay", "clone", "next"];
 
     private static List<ICustomSaveAction> BuildCustomSaveActions(Type[] types, string collectionTypeName)

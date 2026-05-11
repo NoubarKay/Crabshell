@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<TDb>();
         services.AddScoped<ICollectionRepository, CollectionRepository>();
         services.AddScoped<CollectionRepositoryResolver>();
+        services.AddScoped<HookDispatcher>();
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<ISchemaDiffService, SchemaDiffService>();
         services.AddScoped<IDocumentFactory, DocumentFactory>();

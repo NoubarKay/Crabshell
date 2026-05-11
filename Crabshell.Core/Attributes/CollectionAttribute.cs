@@ -32,6 +32,13 @@ public sealed class CollectionAttribute : Attribute
     /// Each type must implement <see cref="BulkActions.IBulkAction"/> and have a public parameterless constructor.
     /// </summary>
     public Type[] CustomBulkOptions { get; set; } = [];
+
+    /// <summary>
+    /// Hook types invoked before and/or after each save operation.
+    /// Each type must implement <see cref="Hooks.IBeforeSaveHook{TDocument}"/> and/or <see cref="Hooks.IAfterSaveHook{TDocument}"/>.
+    /// Hooks are resolved from DI and run in declaration order.
+    /// </summary>
+    public Type[] Hooks { get; set; } = [];
  
     public CollectionAttribute(string slug)
     {
