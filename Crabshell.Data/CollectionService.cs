@@ -1,12 +1,18 @@
 using Crabshell.Core;
 using Crabshell.Core.Documents;
+using Crabshell.Core.Hooks;
 using Crabshell.Core.Registry;
 using Crabshell.Core.Repository;
 using Crabshell.Core.Services;
 
 namespace Crabshell.Data;
 
-public class CollectionService(CollectionRepositoryResolver resolver, CollectionRegistry registry, IDocumentFactory factory) : ICollectionService
+public class CollectionService(
+    CollectionRepositoryResolver resolver,
+    CollectionRegistry registry,
+    IDocumentFactory factory,
+    HookDispatcher hooks,
+    IServiceProvider services) : ICollectionService
 {
     public async Task<Result<PagedResult>> GetPageAsync(string slug, CollectionQuery query)
     {
@@ -73,7 +79,14 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
         var document = factory.Create(collection);
         MapFormValues(collection, document, formValues);
 
+        var ctx = new SaveContext(SaveOperation.Create, services);
+        var before = await hooks.RunBeforeAsync(collection, document, ctx, CancellationToken.None);
+        if (before.IsAborted)
+            return new Result<(Guid Id, List<ValidationError> Errors)>.Invalid(
+                [new ValidationError("", before.AbortMessage!)]);
+
         await resolver.Resolve(collection).CreateAsync(document);
+        await hooks.RunAfterAsync(collection, document, ctx, CancellationToken.None);
         return new Result<(Guid Id, List<ValidationError> Errors)>.Ok((document.Id, []));
     }
 
@@ -93,7 +106,13 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
 
         MapFormValues(collection, document, formValues);
 
+        var ctx = new SaveContext(SaveOperation.Update, services);
+        var before = await hooks.RunBeforeAsync(collection, document, ctx, CancellationToken.None);
+        if (before.IsAborted)
+            return new Result<List<ValidationError>>.Invalid([new ValidationError("", before.AbortMessage!)]);
+
         await resolver.Resolve(collection).UpdateAsync(document);
+        await hooks.RunAfterAsync(collection, document, ctx, CancellationToken.None);
         return new Result<List<ValidationError>>.Ok([]);
     }
 
@@ -105,7 +124,12 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
         var document = await resolver.Resolve(collection).GetByIdAsync(collection, id);
         if (document is null) return;
 
+        var ctx = new SaveContext(SaveOperation.Delete, services);
+        var before = await hooks.RunBeforeAsync(collection, document, ctx, CancellationToken.None);
+        if (before.IsAborted) return;
+
         await resolver.Resolve(collection).DeleteAsync(document);
+        await hooks.RunAfterAsync(collection, document, ctx, CancellationToken.None);
     }
 
     private async Task<List<ValidationError>> ValidateRelationshipsAsync(
