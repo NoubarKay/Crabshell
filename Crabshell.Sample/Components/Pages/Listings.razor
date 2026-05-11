@@ -1,0 +1,87 @@
+@page "/listings"
+@inject ICollectionService CollectionService
+@rendermode InteractiveServer
+
+<PageTitle>Listings</PageTitle>
+
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween"
+             AlignItems="AlignItems.Center" Style="margin-bottom:24px">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" Style="font-weight:700;margin:0">Listings</RadzenText>
+        @if (!isLoading)
+        {
+            <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color);margin:0">
+                @filtered.Count listing@(filtered.Count == 1 ? "" : "s")
+            </RadzenText>
+        }
+    </div>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" AlignItems="AlignItems.Center">
+        <RadzenLabel Text="Status" Style="font-size:12px;font-weight:600" />
+        <RadzenDropDown @bind-Value="statusFilter"
+                        Data="@statusOptions"
+                        TextProperty="Label"
+                        ValueProperty="Value"
+                        Change="@(_ => ApplyFilter())"
+                        Style="width:160px" />
+    </RadzenStack>
+</RadzenStack>
+
+@if (isLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" Style="padding:80px">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (filtered.Count == 0)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+        No listings match the selected filter.
+    </RadzenAlert>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px">
+        @foreach (var listing in filtered)
+        {
+            <ListingCard Listing="listing" />
+        }
+    </div>
+}
+
+@code {
+    private List<Listing> all = [];
+    private List<Listing> filtered = [];
+    private bool isLoading = true;
+    private string statusFilter = "all";
+
+    private record StatusOption(string Value, string Label);
+    private readonly List<StatusOption> statusOptions =
+    [
+        new("all",         "All Statuses"),
+        new("Active",      "Active"),
+        new("Pending",     "Pending"),
+        new("ComingSoon",  "Coming Soon"),
+        new("Sold",        "Sold"),
+        new("OffMarket",   "Off Market"),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await CollectionService.GetPageAsync(
+            "listings",
+            new CollectionQuery(Take: 1000, OrderBy: nameof(Listing.Price), Descending: false));
+
+        if (result is Result<PagedResult>.Ok { Value: var page })
+            all = page.Items.OfType<Listing>().ToList();
+
+        ApplyFilter();
+        isLoading = false;
+    }
+
+    private void ApplyFilter()
+    {
+        filtered = statusFilter == "all"
+            ? all
+            : all.Where(l => l.Status.ToString() == statusFilter).ToList();
+    }
+}

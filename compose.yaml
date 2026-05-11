@@ -1,7 +1,8 @@
 ﻿services:
   crabshell.sample:
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     image: crabshell.sample
     ports:
       - "7000:8080"

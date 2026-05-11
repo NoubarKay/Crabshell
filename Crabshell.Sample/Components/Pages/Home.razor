@@ -1,6 +1,98 @@
 @page "/"
+@inject ICollectionService CollectionService
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+<PageTitle>@(siteSettings?.SiteName ?? "Real Estate")</PageTitle>
 
-<RadzenText TextStyle="TextStyle.H4">Hello, world!</RadzenText>
-<RadzenText>Welcome to your new app.</RadzenText>
+@if (isLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" Style="padding:80px">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else
+{
+    <!-- HERO -->
+    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 55%,#0f3460 100%);border-radius:16px;padding:72px 48px;margin-bottom:40px;text-align:center">
+        <RadzenText TextStyle="TextStyle.H2" Style="color:white;font-weight:800;margin-bottom:12px">
+            @(siteSettings?.SiteName ?? "Find Your Dream Home")
+        </RadzenText>
+        @if (!string.IsNullOrWhiteSpace(siteSettings?.Tagline))
+        {
+            <RadzenText TextStyle="TextStyle.H6" Style="color:rgba(255,255,255,0.65);margin-bottom:32px;display:block">
+                @siteSettings.Tagline
+            </RadzenText>
+        }
+        <RadzenButton Text="Browse All Listings" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Large"
+                      NavigateUrl="/listings" Style="margin-top:8px" />
+    </div>
+
+    <!-- STATS -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:48px">
+        <div style="background:var(--rz-base-background-color);border:1px solid var(--rz-border-color);border-radius:12px;padding:28px;text-align:center">
+            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@activeCount</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Active Listings</RadzenText>
+        </div>
+        <div style="background:var(--rz-base-background-color);border:1px solid var(--rz-border-color);border-radius:12px;padding:28px;text-align:center">
+            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@agentCount</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Agents</RadzenText>
+        </div>
+        <div style="background:var(--rz-base-background-color);border:1px solid var(--rz-border-color);border-radius:12px;padding:28px;text-align:center">
+            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@neighborhoodCount</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Neighborhoods</RadzenText>
+        </div>
+    </div>
+
+    <!-- FEATURED LISTINGS -->
+    @if (featuredListings.Count > 0)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween"
+                     AlignItems="AlignItems.Center" Style="margin-bottom:20px">
+            <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin:0">Featured Listings</RadzenText>
+            <RadzenButton Text="View All" Variant="Variant.Text" ButtonStyle="ButtonStyle.Primary"
+                          NavigateUrl="/listings" />
+        </RadzenStack>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px">
+            @foreach (var listing in featuredListings)
+            {
+                <ListingCard Listing="listing" />
+            }
+        </div>
+    }
+    else
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+            No featured listings yet. Add some from the <a href="/admin">admin panel</a>.
+        </RadzenAlert>
+    }
+}
+
+@code {
+    private SiteSettings? siteSettings;
+    private List<Listing> featuredListings = [];
+    private int activeCount, agentCount, neighborhoodCount;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var settingsResult = await CollectionService.GetSingleAsync("site_settings");
+        if (settingsResult is Result<CrabshellDocument>.Ok { Value: var rawSettings })
+            siteSettings = rawSettings as SiteSettings;
+
+        var listingsResult = await CollectionService.GetPageAsync("listings", new CollectionQuery(Take: 1000));
+        if (listingsResult is Result<PagedResult>.Ok { Value: var lp })
+        {
+            var all = lp.Items.OfType<Listing>().ToList();
+            activeCount = all.Count(l => l.Status == ListingStatus.Active);
+            featuredListings = all.Where(l => l.IsFeatured && l.Status == ListingStatus.Active).Take(6).ToList();
+        }
+
+        var agentsResult = await CollectionService.GetPageAsync("agents", new CollectionQuery(Take: 1));
+        if (agentsResult is Result<PagedResult>.Ok { Value: var ap }) agentCount = ap.TotalCount;
+
+        var nbResult = await CollectionService.GetPageAsync("neighborhoods", new CollectionQuery(Take: 1));
+        if (nbResult is Result<PagedResult>.Ok { Value: var np }) neighborhoodCount = np.TotalCount;
+
+        isLoading = false;
+    }
+}

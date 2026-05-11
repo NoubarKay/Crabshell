@@ -2,6 +2,7 @@ using Crabshell.Core.Attributes;
 using Crabshell.Core.Attributes.Fields;
 using Crabshell.Core.Documents;
 using Crabshell.Sample.Actions;
+using Crabshell.Sample.Hooks;
 
 namespace Crabshell.Sample.Collections;
 
@@ -9,7 +10,8 @@ namespace Crabshell.Sample.Collections;
     Label = "Agencies",
     SaveOptions = SaveOption.Save | SaveOption.SaveAndClone | SaveOption.SaveAndGoToNext,
     CustomSaveOptions = new[] { typeof(PublishAction) },
-    CustomBulkOptions = new[] { typeof(DeleteSelectedAgenciesAction) }
+    CustomBulkOptions = new[] { typeof(DeleteSelectedAgenciesAction) },
+    Hooks = [typeof(AgencyAuditHook)]
     )]
 public class Agency : CrabshellDocument
 {

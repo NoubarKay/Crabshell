@@ -1,10 +1,11 @@
 using Crabshell.Core.Attributes;
 using Crabshell.Core.Attributes.Fields;
 using Crabshell.Core.Documents;
+using Crabshell.Sample.Hooks;
 
 namespace Crabshell.Sample.Collections;
 
-[Collection("agents", Label = "Agents")]
+[Collection("agents", Label = "Agents", Hooks = [typeof(AgentHooks)])]
 public class Agent : CrabshellDocument
 {
     [GridOptions(Visible = true, Order = 0, Filterable = true)]

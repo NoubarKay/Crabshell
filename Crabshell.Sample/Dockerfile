@@ -10,8 +10,11 @@ WORKDIR /src
 COPY ["Crabshell.Sample/Crabshell.Sample.csproj", "Crabshell.Sample/"]
 COPY ["Crabshell.Core/Crabshell.Core.csproj", "Crabshell.Core/"]
 COPY ["Crabshell.Data/Crabshell.Data.csproj", "Crabshell.Data/"]
-COPY ["Crabshell.SourceGenerator/Crabshell.SourceGenerator.csproj", "Crabshell.SourceGenerator/"]
 COPY ["Crabshell.Admin/Crabshell.Admin.csproj", "Crabshell.Admin/"]
+COPY ["Crabshell.Storage.Local/Crabshell.Storage.Local.csproj", "Crabshell.Storage.Local/"]
+COPY ["Crabshell.Analyzers/Crabshell.Analyzers.csproj", "Crabshell.Analyzers/"]
+COPY ["Crabshell.SourceGenerator/Crabshell.SourceGenerator.csproj", "Crabshell.SourceGenerator/"]
+COPY ["src/data/Crabshell.Data.Postgres/Crabshell.Data.Postgres.csproj", "src/data/Crabshell.Data.Postgres/"]
 RUN dotnet restore "Crabshell.Sample/Crabshell.Sample.csproj"
 COPY . .
 WORKDIR "/src/Crabshell.Sample"

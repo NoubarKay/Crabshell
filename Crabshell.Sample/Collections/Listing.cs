@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Crabshell.Core.Attributes;
 using Crabshell.Core.Attributes.Fields;
 using Crabshell.Core.Documents;
+using Crabshell.Sample.Hooks;
 
 namespace Crabshell.Sample.Collections;
 
@@ -21,7 +22,7 @@ public enum PropertyType
 
 public enum PropertyCondition { Excellent, Good, Fair, NeedsWork }
 
-[Collection("listings", Label = "Listings")]
+[Collection("listings", Label = "Listings", Hooks = [typeof(ListingHooks)])]
 public class Listing : CrabshellDocument
 {
     [GridOptions(Visible = true, Order = 0, Filterable = true)]

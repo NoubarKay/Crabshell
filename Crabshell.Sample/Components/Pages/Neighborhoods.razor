@@ -1,0 +1,101 @@
+@page "/neighborhoods"
+@inject ICollectionService CollectionService
+@rendermode InteractiveServer
+
+<PageTitle>Neighborhoods</PageTitle>
+
+<RadzenText TextStyle="TextStyle.H4" Style="font-weight:700;margin-bottom:24px">Neighborhoods</RadzenText>
+
+@if (isLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" Style="padding:80px">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (neighborhoods.Count == 0)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+        No neighborhoods yet. Add some from the <a href="/admin">admin panel</a>.
+    </RadzenAlert>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px">
+        @foreach (var nb in neighborhoods)
+        {
+            <RadzenCard Style="padding:0;overflow:hidden">
+                <div style="background:linear-gradient(135deg,#2d6a4f,#52b788);height:80px;display:flex;align-items:center;padding:0 20px">
+                    <div>
+                        <RadzenText TextStyle="TextStyle.H6" Style="color:white;font-weight:700;margin:0">@nb.Name</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" Style="color:rgba(255,255,255,0.75);margin:0">
+                            @nb.City, @nb.State
+                        </RadzenText>
+                    </div>
+                </div>
+                <div style="padding:16px">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                        @if (nb.MedianPrice.HasValue)
+                        {
+                            <div style="background:var(--rz-base-100);border-radius:8px;padding:10px;text-align:center">
+                                <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color);display:block">Median Price</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2" Style="font-weight:700">@nb.MedianPrice.Value.ToString("C0")</RadzenText>
+                            </div>
+                        }
+                        @if (nb.WalkabilityScore.HasValue)
+                        {
+                            <div style="background:var(--rz-base-100);border-radius:8px;padding:10px;text-align:center">
+                                <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color);display:block">Walkability</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2" Style="font-weight:700">@nb.WalkabilityScore / 100</RadzenText>
+                            </div>
+                        }
+                        @if (nb.AvgDaysOnMarket.HasValue)
+                        {
+                            <div style="background:var(--rz-base-100);border-radius:8px;padding:10px;text-align:center">
+                                <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color);display:block">Avg Days on Market</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2" Style="font-weight:700">@nb.AvgDaysOnMarket days</RadzenText>
+                            </div>
+                        }
+                    </div>
+
+                    @if (nb.TopRatedSchools || nb.GatedCommunity)
+                    {
+                        <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="6px">
+                            @if (nb.TopRatedSchools)
+                            {
+                                <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Top Rated Schools" />
+                            }
+                            @if (nb.GatedCommunity)
+                            {
+                                <RadzenBadge BadgeStyle="BadgeStyle.Light" Text="Gated Community" />
+                            }
+                        </RadzenStack>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(nb.Description))
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color);margin-top:10px">
+                            @(nb.Description.Length > 120 ? nb.Description[..120] + "…" : nb.Description)
+                        </RadzenText>
+                    }
+                </div>
+            </RadzenCard>
+        }
+    </div>
+}
+
+@code {
+    private List<Neighborhood> neighborhoods = [];
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await CollectionService.GetPageAsync(
+            "neighborhoods",
+            new CollectionQuery(Take: 1000, OrderBy: nameof(Neighborhood.Name)));
+
+        if (result is Result<PagedResult>.Ok { Value: var page })
+            neighborhoods = page.Items.OfType<Neighborhood>().ToList();
+
+        isLoading = false;
+    }
+}

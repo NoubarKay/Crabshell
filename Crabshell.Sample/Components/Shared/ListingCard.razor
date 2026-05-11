@@ -1,0 +1,56 @@
+<div style="background:var(--rz-base-background-color);border:1px solid var(--rz-border-color);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:100%">
+    <div style="background:linear-gradient(135deg,var(--rz-primary-lighter),var(--rz-primary-light));height:110px;display:flex;align-items:center;justify-content:center">
+        <RadzenIcon Icon="home" Style="font-size:48px;color:var(--rz-primary);opacity:0.35" />
+    </div>
+    <div style="padding:16px;flex:1;display:flex;flex-direction:column;gap:8px">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
+            <RadzenText TextStyle="TextStyle.H6" Style="font-weight:700;margin:0">
+                @Listing.Price.ToString("C0")
+            </RadzenText>
+            <RadzenBadge BadgeStyle="@StatusStyle" Text="@Listing.Status.ToString()" />
+        </RadzenStack>
+        <RadzenText TextStyle="TextStyle.Body1" Style="font-weight:500">@Listing.Address</RadzenText>
+        @if (!string.IsNullOrWhiteSpace(Listing.Headline))
+        {
+            <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color)">@Listing.Headline</RadzenText>
+        }
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12px">
+            @if (Listing.Bedrooms > 0)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">
+                    @Listing.Bedrooms bd
+                </RadzenText>
+            }
+            @if (Listing.Bathrooms > 0)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">
+                    @Listing.Bathrooms ba
+                </RadzenText>
+            }
+            @if (Listing.SquareFeet.HasValue)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">
+                    @Listing.SquareFeet.Value.ToString("N0") sqft
+                </RadzenText>
+            }
+        </RadzenStack>
+        <div style="margin-top:auto;padding-top:8px">
+            <RadzenButton Text="View Listing" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Outlined"
+                          Size="ButtonSize.Small" Style="width:100%"
+                          NavigateUrl="@($"/listings/{Listing.Id}")" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public required Listing Listing { get; set; }
+
+    private BadgeStyle StatusStyle => Listing.Status switch
+    {
+        ListingStatus.Active     => BadgeStyle.Success,
+        ListingStatus.Pending    => BadgeStyle.Warning,
+        ListingStatus.Sold       => BadgeStyle.Danger,
+        ListingStatus.ComingSoon => BadgeStyle.Info,
+        _                        => BadgeStyle.Light
+    };
+}
