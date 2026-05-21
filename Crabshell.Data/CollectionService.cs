@@ -73,7 +73,9 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
         var document = factory.Create(collection);
         MapFormValues(collection, document, formValues);
 
-        await resolver.Resolve(collection).CreateAsync(document);
+        var repo = resolver.Resolve(collection);
+        await repo.CreateAsync(document);
+        await repo.SyncManyToManyAsync(collection, document);
         return new Result<(Guid Id, List<ValidationError> Errors)>.Ok((document.Id, []));
     }
 
@@ -86,14 +88,16 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
         if (errors.Count > 0) return new Result<List<ValidationError>>.Invalid(errors);
 
         var relationshipErrors = await ValidateRelationshipsAsync(collection, formValues);
-        if (relationshipErrors.Count > 0) return new Result<List<ValidationError>>.Invalid(errors);
+        if (relationshipErrors.Count > 0) return new Result<List<ValidationError>>.Invalid(relationshipErrors);
 
-        var document = await resolver.Resolve(collection).GetByIdAsync(collection, id);
+        var repo = resolver.Resolve(collection);
+        var document = await repo.GetByIdAsync(collection, id);
         if (document is null) return new Result<List<ValidationError>>.Ok([]);
 
         MapFormValues(collection, document, formValues);
 
-        await resolver.Resolve(collection).UpdateAsync(document);
+        await repo.UpdateAsync(document);
+        await repo.SyncManyToManyAsync(collection, document);
         return new Result<List<ValidationError>>.Ok([]);
     }
 
@@ -127,6 +131,29 @@ public class CollectionService(CollectionRepositoryResolver resolver, Collection
             var exists = await resolver.Resolve(relatedCollection).GetByIdAsync(relatedCollection, guid);
             if (exists is null)
                 errors.Add(new ValidationError(field.PropertyName, $"{field.Label} references a record that does not exist."));
+        }
+
+        foreach (var field in collection.Fields.Where(f =>
+            f.FieldType == Core.Attributes.FieldType.ManyToMany && f.ManyToManySettings is not null))
+        {
+            if (!formValues.TryGetValue(field.PropertyName, out var value)) continue;
+            if (string.IsNullOrWhiteSpace(value)) continue;
+
+            var relatedCollection = registry.Get(field.ManyToManySettings!.TargetSlug);
+            if (relatedCollection is null) continue;
+
+            var ids = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var idStr in ids)
+            {
+                if (!Guid.TryParse(idStr, out var guid)) continue;
+
+                var exists = await resolver.Resolve(relatedCollection).GetByIdAsync(relatedCollection, guid);
+                if (exists is null)
+                {
+                    errors.Add(new ValidationError(field.PropertyName, $"{field.Label} references a record that does not exist."));
+                    break;
+                }
+            }
         }
 
         return errors;

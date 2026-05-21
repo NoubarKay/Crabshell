@@ -12,6 +12,7 @@ public partial class CrabshellDbContext(DbContextOptions<CrabshellDbContext> opt
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var collections = registry.GetAll().Concat(registry.GetAllSingles()).ToList();
+        var configuredJoinTables = new HashSet<string>();
 
         foreach (var collection in collections)
         {
@@ -20,6 +21,13 @@ public partial class CrabshellDbContext(DbContextOptions<CrabshellDbContext> opt
 
             foreach (var field in collection.Fields)
             {
+                // Many-to-many fields are backed by a join table, not a column on this entity.
+                if (field.FieldType == FieldType.ManyToMany)
+                {
+                    entityBuilder.Ignore(field.PropertyName);
+                    continue;
+                }
+
                 var property = entityBuilder.Property(field.ClrType, field.PropertyName);
 
                 if (field.Required)
@@ -40,6 +48,32 @@ public partial class CrabshellDbContext(DbContextOptions<CrabshellDbContext> opt
                     .WithMany()
                     .HasForeignKey(field.PropertyName)
                     .OnDelete(DeleteBehavior.Restrict);
+            }
+
+            foreach (var field in collection.Fields.Where(f =>
+                f.FieldType == FieldType.ManyToMany && f.ManyToManySettings is not null))
+            {
+                var settings = field.ManyToManySettings!;
+                if (!configuredJoinTables.Add(settings.JoinTableName)) continue;
+
+                var target = collections.FirstOrDefault(c => c.Slug == settings.TargetSlug);
+                if (target is null) continue;
+
+                var sourceClr = collection.ClrType;
+                var targetClr = target.ClrType;
+                var sourceCol = settings.SourceColumn;
+                var targetCol = settings.TargetColumn;
+                var joinTable = settings.JoinTableName;
+
+                modelBuilder.SharedTypeEntity<Dictionary<string, object>>(joinTable, b =>
+                {
+                    b.ToTable(joinTable);
+                    b.Property<Guid>(sourceCol);
+                    b.Property<Guid>(targetCol);
+                    b.HasKey(sourceCol, targetCol);
+                    b.HasOne(sourceClr, null).WithMany().HasForeignKey(sourceCol).OnDelete(DeleteBehavior.Cascade);
+                    b.HasOne(targetClr, null).WithMany().HasForeignKey(targetCol).OnDelete(DeleteBehavior.Cascade);
+                });
             }
 
             var param = Expression.Parameter(collection.ClrType, "e");

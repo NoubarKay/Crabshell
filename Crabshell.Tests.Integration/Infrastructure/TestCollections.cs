@@ -22,6 +22,9 @@ public class Article : CrabshellDocument
 
     [DateTimeField(Label = "Published At")]
     public DateTime? PublishedAt { get; set; }
+
+    [ManyToManyField(typeof(Author), Label = "Authors")]
+    public List<Guid> AuthorIds { get; set; } = [];
 }
 
 [Crabshell.Core.Attributes.Collection("authors")]

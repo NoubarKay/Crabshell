@@ -20,7 +20,7 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
                 await CreateTableAsync(collection);
             else
             {
-                foreach (var field in collection.Fields)
+                foreach (var field in collection.Fields.Where(f => f.FieldType != FieldType.ManyToMany))
                 {
                     if (!existingColumns.Contains(field.ColumnName))
                         await AddColumnAsync(collection.Slug, field);
@@ -45,6 +45,34 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
                 await EnsureForeignKeyAsync(collection.Slug, field);
             }
         }
+
+        // Pass 3: ensure many-to-many join tables exist
+        var createdJoinTables = new HashSet<string>();
+        foreach (var collection in allCollections)
+        {
+            foreach (var field in collection.Fields.Where(f =>
+                f.FieldType == FieldType.ManyToMany && f.ManyToManySettings is not null))
+            {
+                var settings = field.ManyToManySettings!;
+                if (!createdJoinTables.Add(settings.JoinTableName)) continue;
+                await CreateJoinTableAsync(collection.Slug, settings);
+            }
+        }
+    }
+
+    private async Task CreateJoinTableAsync(string sourceSlug, Core.Registry.ManyToManyFieldSettings settings)
+    {
+        var sql = $"""
+                   CREATE TABLE IF NOT EXISTS "{settings.JoinTableName}" (
+                       "{settings.SourceColumn}" {dialect.UuidType} NOT NULL,
+                       "{settings.TargetColumn}" {dialect.UuidType} NOT NULL,
+                       PRIMARY KEY ("{settings.SourceColumn}", "{settings.TargetColumn}"),
+                       CONSTRAINT "fk_{settings.JoinTableName}_source" FOREIGN KEY ("{settings.SourceColumn}") REFERENCES "{sourceSlug}" (id) ON DELETE CASCADE,
+                       CONSTRAINT "fk_{settings.JoinTableName}_target" FOREIGN KEY ("{settings.TargetColumn}") REFERENCES "{settings.TargetSlug}" (id) ON DELETE CASCADE
+                   );
+                   """;
+
+        await db.Database.ExecuteSqlRawAsync(sql);
     }
 
     private async Task<HashSet<string>> GetExistingColumnsAsync(string tableName)
@@ -81,7 +109,7 @@ public class SchemaDiffService(CrabshellDbContext db, CollectionRegistry registr
             $"deleted_at {dialect.TimestampType} NULL"
         };
 
-        foreach (var field in collection.Fields)
+        foreach (var field in collection.Fields.Where(f => f.FieldType != FieldType.ManyToMany))
             columns.Add(BuildColumnDdl(field));
 
         var sql = $"""

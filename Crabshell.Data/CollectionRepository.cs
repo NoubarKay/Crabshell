@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Crabshell.Core.Attributes;
 using Crabshell.Core.Documents;
 using Crabshell.Core.Registry;
 using Crabshell.Core.Repository;
@@ -80,13 +81,19 @@ public class CollectionRepository : ICollectionRepository
         var totalCount = await q.CountAsync();
         var items = await q.Skip(query.Skip).Take(query.Take).ToListAsync();
 
+        await LoadManyToManyAsync(collection, items);
+
         return new PagedResult(items, totalCount, query.Skip, query.Take);
     }
 
     public virtual async Task<CrabshellDocument?> GetByIdAsync(
-        CollectionMeta collection, Guid id) =>
-        await GetQueryable(collection)
-            .FirstOrDefaultAsync(x => x.Id == id);
+        CollectionMeta collection, Guid id)
+    {
+        var doc = await GetQueryable(collection).FirstOrDefaultAsync(x => x.Id == id);
+        if (doc is not null)
+            await LoadManyToManyAsync(collection, [doc]);
+        return doc;
+    }
 
     public virtual async Task<CrabshellDocument> CreateAsync(CrabshellDocument document)
     {
@@ -111,5 +118,78 @@ public class CollectionRepository : ICollectionRepository
         document.DeletedAt = DateTime.UtcNow;
         DbContext.Update(document);
         await DbContext.SaveChangesAsync();
+    }
+
+    public virtual async Task SyncManyToManyAsync(CollectionMeta collection, CrabshellDocument document)
+    {
+        var m2mFields = collection.Fields
+            .Where(f => f.FieldType == FieldType.ManyToMany && f.ManyToManySettings is not null)
+            .ToList();
+        if (m2mFields.Count == 0) return;
+
+        foreach (var field in m2mFields)
+        {
+            var settings  = field.ManyToManySettings!;
+            var sourceCol = settings.SourceColumn;
+            var targetCol = settings.TargetColumn;
+            var set       = JoinSet(settings.JoinTableName);
+
+            var desired = (field.Getter(document) as IEnumerable<Guid>)?.Distinct().ToHashSet() ?? [];
+
+            var existingRows = await set
+                .Where(r => EF.Property<Guid>(r, sourceCol) == document.Id)
+                .ToListAsync();
+            var existingTargets = existingRows.Select(r => (Guid)r[targetCol]).ToHashSet();
+
+            foreach (var row in existingRows)
+                if (!desired.Contains((Guid)row[targetCol]))
+                    set.Remove(row);
+
+            foreach (var targetId in desired)
+                if (!existingTargets.Contains(targetId))
+                    set.Add(new Dictionary<string, object>
+                    {
+                        [sourceCol] = document.Id,
+                        [targetCol] = targetId,
+                    });
+        }
+
+        await DbContext.SaveChangesAsync();
+    }
+
+    private DbSet<Dictionary<string, object>> JoinSet(string joinTable) =>
+        DbContext.Set<Dictionary<string, object>>(joinTable);
+
+    private async Task LoadManyToManyAsync(CollectionMeta collection, IReadOnlyList<CrabshellDocument> documents)
+    {
+        var m2mFields = collection.Fields
+            .Where(f => f.FieldType == FieldType.ManyToMany && f.ManyToManySettings is not null)
+            .ToList();
+        if (m2mFields.Count == 0 || documents.Count == 0) return;
+
+        var ids = documents.Select(d => d.Id).ToList();
+
+        foreach (var field in m2mFields)
+        {
+            var settings  = field.ManyToManySettings!;
+            var sourceCol = settings.SourceColumn;
+            var targetCol = settings.TargetColumn;
+
+            var rows = await JoinSet(settings.JoinTableName)
+                .Where(r => ids.Contains(EF.Property<Guid>(r, sourceCol)))
+                .Select(r => new
+                {
+                    Source = EF.Property<Guid>(r, sourceCol),
+                    Target = EF.Property<Guid>(r, targetCol),
+                })
+                .ToListAsync();
+
+            var bySource = rows
+                .GroupBy(r => r.Source)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Target).ToList());
+
+            foreach (var doc in documents)
+                field.Setter(doc, bySource.TryGetValue(doc.Id, out var list) ? list : new List<Guid>());
+        }
     }
 }

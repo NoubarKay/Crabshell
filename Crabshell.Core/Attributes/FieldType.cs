@@ -18,5 +18,7 @@ public enum FieldType
     /// <summary>text column. Rendered as a rich text (HTML) editor.</summary>
     RichText,
     /// <summary>varchar column storing a relative file path. Rendered as a file upload widget.</summary>
-    Media
+    Media,
+    /// <summary>Many-to-many relationship backed by a junction table. Not a column; rendered as a multi-select dropdown.</summary>
+    ManyToMany
 }

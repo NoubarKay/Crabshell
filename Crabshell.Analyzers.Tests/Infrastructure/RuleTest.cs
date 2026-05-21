@@ -68,6 +68,14 @@ public static class RuleTest<TAnalyzer> where TAnalyzer : DiagnosticAnalyzer, ne
         }
 
         [AttributeUsage(AttributeTargets.Property)]
+        public sealed class ManyToManyFieldAttribute : CrabshellFieldAttribute
+        {
+            public Type RelatesTo { get; }
+            public string? JoinTableName { get; set; }
+            public ManyToManyFieldAttribute(Type relatesTo) => RelatesTo = relatesTo;
+        }
+
+        [AttributeUsage(AttributeTargets.Property)]
         public sealed class GridOptionsAttribute : Attribute
         {
             public bool Visible { get; set; } = true;

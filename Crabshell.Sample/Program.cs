@@ -50,7 +50,6 @@ app.Run();
 //TODO: In email validate it in more detail
 //TODO: Enum value title override in select field [JsonStringEnumMemberName("House")]
 //TODO: Enum Flag multiple values / Aliases of other values
-//TODO: Many too many table in multiple dropdown
 //TODO: Pagination using cursor (Optional)
 //TODO: Add page query param to grid page
 //TODO: Static analyzer

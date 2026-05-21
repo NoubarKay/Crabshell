@@ -57,6 +57,7 @@ public sealed class CollectionRegistry
                     p.GetCustomAttribute<NumberFieldAttribute>() is not null,
                     p.GetCustomAttribute<RichTextFieldAttribute>() is not null,
                     p.GetCustomAttribute<MediaFieldAttribute>() is not null,
+                    p.GetCustomAttribute<ManyToManyFieldAttribute>() is not null,
                 }.Count(x => x);
 
                 if (fieldAttrCount > 1)
@@ -200,6 +201,17 @@ public sealed class CollectionRegistry
                         v => v,
                         fieldType: FieldType.Media,
                         mediaSettings: new MediaFieldSettings { Accept = mediaAttr.Accept, MaxSizeMb = mediaAttr.MaxSizeMb }));
+
+                var m2mAttr = p.GetCustomAttribute<ManyToManyFieldAttribute>();
+                if (m2mAttr is not null)
+                    fieldMetas.Add(CreateFieldMeta(p,
+                        m2mAttr,
+                        groupAttr,
+                        gridAttr,
+                        accessors,
+                        ParseGuidCsv,
+                        fieldType: FieldType.ManyToMany,
+                        manyToManySettings: BuildManyToManySettings(m2mAttr, slug)));
             }
             _collections[slug] = new CollectionMeta
             {
@@ -242,6 +254,7 @@ public sealed class CollectionRegistry
                     p.GetCustomAttribute<NumberFieldAttribute>() is not null,
                     p.GetCustomAttribute<RichTextFieldAttribute>() is not null,
                     p.GetCustomAttribute<MediaFieldAttribute>() is not null,
+                    p.GetCustomAttribute<ManyToManyFieldAttribute>() is not null,
                 }.Count(x => x);
 
                 if (fieldAttrCount > 1)
@@ -350,6 +363,13 @@ public sealed class CollectionRegistry
                         v => v,
                         fieldType: FieldType.Media,
                         mediaSettings: new MediaFieldSettings { Accept = mediaAttr.Accept, MaxSizeMb = mediaAttr.MaxSizeMb }));
+
+                var m2mAttr = p.GetCustomAttribute<ManyToManyFieldAttribute>();
+                if (m2mAttr is not null)
+                    fieldMetas.Add(CreateFieldMeta(p, m2mAttr, groupAttr, gridAttr, accessors,
+                        ParseGuidCsv,
+                        fieldType: FieldType.ManyToMany,
+                        manyToManySettings: BuildManyToManySettings(m2mAttr, slug)));
             }
 
             _collections[slug] = new CollectionMeta
@@ -391,7 +411,8 @@ public sealed class CollectionRegistry
         BoolFieldSettings? boolSettings = null,
         DateTimeFieldSettings? dateTimeSettings = null,
         NumberFieldSettings? numberSettings = null,
-        MediaFieldSettings? mediaSettings = null) => new()
+        MediaFieldSettings? mediaSettings = null,
+        ManyToManyFieldSettings? manyToManySettings = null) => new()
     {
         PropertyName = p.Name,
         ColumnName = ToSnakeCase(p.Name),
@@ -407,6 +428,7 @@ public sealed class CollectionRegistry
         DateTimeSettings = dateTimeSettings,
         NumberSettings = numberSettings,
         MediaSettings = mediaSettings,
+        ManyToManySettings = manyToManySettings,
         GroupSettings = groupAttr is null ? null : new FieldGroupSettings { Name = groupAttr.Name, Sidebar = groupAttr.Sidebar },
         Getter = accessors.getter,
         Setter = accessors.setter,
@@ -417,6 +439,40 @@ public sealed class CollectionRegistry
         GridOrder = gridAttr?.Order ?? 0,
         FormValueParser = parser,
     };
+
+    private static ManyToManyFieldSettings BuildManyToManySettings(ManyToManyFieldAttribute attr, string sourceSlug)
+    {
+        var targetSlug = attr.RelatesTo.GetCustomAttribute<CollectionAttribute>()?.Slug
+                         ?? attr.RelatesTo.GetCustomAttribute<SingleAttribute>()?.Slug
+                         ?? attr.RelatesTo.Name;
+
+        var joinTable = attr.JoinTableName ?? $"{sourceSlug}_{targetSlug}";
+
+        // Distinguish columns for self-referential relationships where the slugs match.
+        var sourceColumn = $"{sourceSlug}_id";
+        var targetColumn = $"{targetSlug}_id";
+        if (sourceColumn == targetColumn)
+        {
+            sourceColumn = "source_id";
+            targetColumn = "target_id";
+        }
+
+        return new ManyToManyFieldSettings
+        {
+            TargetSlug    = targetSlug,
+            JoinTableName = joinTable,
+            SourceColumn  = sourceColumn,
+            TargetColumn  = targetColumn,
+        };
+    }
+
+    private static List<Guid> ParseGuidCsv(string? value) =>
+        (value ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Guid.TryParse(s, out var g) ? (Guid?)g : null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .ToList();
 
     private static string ToSnakeCase(string name) =>
         Regex.Replace(name, @"([a-z0-9])([A-Z])|([A-Z]+)([A-Z][a-z])", "$1$3_$2$4").ToLowerInvariant()

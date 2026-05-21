@@ -54,6 +54,9 @@ public sealed class FieldMeta
     /// <summary>Media field settings. Non-null only when <see cref="FieldType"/> is <see cref="FieldType.Media"/>.</summary>
     public MediaFieldSettings? MediaSettings { get; init; }
 
+    /// <summary>Many-to-many field settings. Non-null only when <see cref="FieldType"/> is <see cref="FieldType.ManyToMany"/>.</summary>
+    public ManyToManyFieldSettings? ManyToManySettings { get; init; }
+
     // Layout
     /// <summary>Group settings controlling which panel this field appears in. <c>null</c> = ungrouped main area.</summary>
     public FieldGroupSettings? GroupSettings { get; init; }

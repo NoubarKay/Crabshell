@@ -119,6 +119,11 @@ public class Listing : CrabshellDocument
     [RelationshipField(typeof(Neighborhood), Label = "Neighborhood")]
     public Guid NeighborhoodId { get; set; }
 
+    [GridOptions(Visible = true, Order = 10, Width = 120)]
+    [FieldGroup("People", Sidebar = true)]
+    [ManyToManyField(typeof(Agent), Label = "Co-Listing Agents")]
+    public List<Guid> CoAgentIds { get; set; } = [];
+
     // ── DATES ──────────────────────────────────────────────
     [GridOptions(Visible = true, Order = 8, Width = 140, Sortable = true)]
     [FieldGroup("Dates", Sidebar = true)]

@@ -82,8 +82,8 @@
                             Type="@f.ClrType"
                             Title="@f.Label"
                             Width="@(f.GridWidth > 0 ? $"{f.GridWidth}px" : "")"
-                            Sortable="@f.GridSortable"
-                            Filterable="@f.GridFilterable"
+                            Sortable="@(f.FieldType != FieldType.ManyToMany && f.GridSortable)"
+                            Filterable="@(f.FieldType != FieldType.ManyToMany && f.GridFilterable)"
                             Property="@f.PropertyName">
                             <Template Context="doc">
                                 @GetDisplayValue(doc, f)
@@ -227,6 +227,12 @@
             var html = field.Getter(doc)?.ToString() ?? "";
             var plain = _htmlTagRegex.Replace(html, "");
             return plain.Length > 100 ? plain[..100] + "…" : plain;
+        }
+
+        if (field.FieldType == FieldType.ManyToMany)
+        {
+            var count = (field.Getter(doc) as IEnumerable<Guid>)?.Count() ?? 0;
+            return count == 0 ? "" : $"{count} linked";
         }
 
         if (field.FieldType != FieldType.Relationship)

@@ -179,17 +179,22 @@ else @if (document is not null && collection is not null)
         foreach (var field in collection.Fields)
         {
             var raw = field.Getter(document);
-            formValues[field.PropertyName] = field.FieldType == FieldType.DateTime && raw is DateTime dt
-                ? dt.ToString("O")
-                : raw?.ToString();
+            formValues[field.PropertyName] = field.FieldType switch
+            {
+                FieldType.DateTime when raw is DateTime dt          => dt.ToString("O"),
+                FieldType.ManyToMany when raw is IEnumerable<Guid> g => string.Join(",", g),
+                _                                                   => raw?.ToString()
+            };
         }
 
         relatedDocuments = new();
-        foreach (var field in collection.Fields.Where(f => f.FieldType == FieldType.Relationship))
+        foreach (var field in collection.Fields.Where(f =>
+            f.FieldType == FieldType.Relationship || f.FieldType == FieldType.ManyToMany))
         {
-            if (field.RelationshipSettings is null) continue;
+            var relatedSlug = field.RelationshipSettings?.Slug ?? field.ManyToManySettings?.TargetSlug;
+            if (relatedSlug is null) continue;
             var related = await CollectionService.GetPageAsync(
-                field.RelationshipSettings.Slug,
+                relatedSlug,
                 new CollectionQuery(Skip: 0, Take: 1000));
             if (related is Result<PagedResult>.Ok { Value: var page })
                 relatedDocuments[field.PropertyName] = page.Items.ToList();
@@ -228,6 +233,24 @@ else @if (document is not null && collection is not null)
             {
                 var items = BuildRelationshipItems(field);
                 <RadzenDropDown @bind-Value="formValues[field.PropertyName]"
+                                Data="@items"
+                                TextProperty="Text"
+                                ValueProperty="Value"
+                                AllowFiltering="true"
+                                Style="width:100%" />
+            }
+            else if (field.FieldType == FieldType.ManyToMany)
+            {
+                var items = BuildRelationshipItems(field);
+                var selected = string.IsNullOrEmpty(formValues[field.PropertyName])
+                    ? new List<string>()
+                    : formValues[field.PropertyName]!.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+                <RadzenDropDown TValue="IEnumerable<string>"
+                                Multiple="true"
+                                AllowClear="true"
+                                Chips="true"
+                                Value="@selected"
+                                ValueChanged="@((IEnumerable<string> v) => formValues[field.PropertyName] = v is null ? null : string.Join(",", v))"
                                 Data="@items"
                                 TextProperty="Text"
                                 ValueProperty="Value"
@@ -312,8 +335,9 @@ else @if (document is not null && collection is not null)
     private List<DropDownItem> BuildRelationshipItems(FieldMeta field)
     {
         var docs = relatedDocuments.GetValueOrDefault(field.PropertyName) ?? [];
-        var relatedMeta = field.RelationshipSettings is not null
-            ? Registry.Get(field.RelationshipSettings.Slug)
+        var relatedSlug = field.RelationshipSettings?.Slug ?? field.ManyToManySettings?.TargetSlug;
+        var relatedMeta = relatedSlug is not null
+            ? Registry.Get(relatedSlug)
             : null;
         var firstTextField = relatedMeta?.Fields.FirstOrDefault(f => f.FieldType == FieldType.Text);
 

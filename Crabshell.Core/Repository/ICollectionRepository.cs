@@ -20,6 +20,9 @@ public interface ICollectionRepository
 
     /// <summary>Soft-deletes the given document.</summary>
     Task DeleteAsync(CrabshellDocument document);
+
+    /// <summary>Synchronises many-to-many join rows for the document to match its current relation lists.</summary>
+    Task SyncManyToManyAsync(CollectionMeta collection, CrabshellDocument document);
 }
 
 /// <summary>Strongly-typed variant of <see cref="ICollectionRepository"/> for use with DI.</summary>
