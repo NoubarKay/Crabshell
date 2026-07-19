@@ -13,80 +13,293 @@
 @inject IStorageProvider? StorageProvider
 @rendermode InteractiveServer
 
-
 <PageTitle>@collection?.Label</PageTitle>
 
-<!-- HEADER -->
-<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px">
+<style>
+    /* ── Header ─────────────────────────────────────────────── */
+    .ce-header {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        background: color-mix(in srgb, var(--rz-base-background-color) 88%, transparent);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border-bottom: 1px solid color-mix(in srgb, var(--rz-border-color) 65%, transparent);
+        margin: -1.5rem -1.5rem 2.5rem;
+        padding: 10px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 56px;
+    }
+    .ce-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--rz-text-secondary-color);
+        margin-bottom: 2px;
+    }
+    .ce-breadcrumb a {
+        color: var(--rz-text-secondary-color);
+        text-decoration: none;
+        transition: color 0.12s;
+    }
+    .ce-breadcrumb a:hover { color: var(--rz-text-color); }
+    .ce-breadcrumb .sep { opacity: 0.3; font-size: 13px; user-select: none; }
+    .ce-breadcrumb .crumb-current { color: var(--rz-text-color); font-weight: 600; }
+    .ce-title {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+        color: var(--rz-text-color);
+        line-height: 1.2;
+        margin: 0;
+    }
+    .ce-saving-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--rz-text-disabled-color);
+        letter-spacing: 0.01em;
+    }
+
+    /* ── Main card ───────────────────────────────────────────── */
+    .ce-card {
+        background: var(--rz-base-background-color);
+        border-radius: 16px;
+        border: 1px solid color-mix(in srgb, var(--rz-border-color) 75%, transparent);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 8px 32px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+    .ce-section { padding: 32px 36px; }
+    .ce-section + .ce-section {
+        border-top: 1px solid color-mix(in srgb, var(--rz-border-color) 60%, transparent);
+    }
+    .ce-section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: -0.1px;
+        color: var(--rz-text-color);
+        margin: 0 0 28px;
+    }
+    .ce-section-title::before {
+        content: '';
+        width: 3px;
+        height: 14px;
+        background: var(--rz-primary);
+        border-radius: 2px;
+        display: block;
+        flex-shrink: 0;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .ce-sidebar {
+        width: 292px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 69px;
+        background: var(--rz-base-background-color);
+        border-radius: 16px;
+        border: 1px solid color-mix(in srgb, var(--rz-border-color) 75%, transparent);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 8px 32px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+    .ce-sb-section { padding: 18px 20px; }
+    .ce-sb-section + .ce-sb-section {
+        border-top: 1px solid color-mix(in srgb, var(--rz-border-color) 60%, transparent);
+    }
+    .ce-sb-title {
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--rz-text-disabled-color);
+        margin-bottom: 14px;
+    }
+
+    /* ── Sidebar error banner ────────────────────────────────── */
+    .ce-error-banner {
+        background: color-mix(in srgb, var(--rz-danger) 7%, var(--rz-base-background-color));
+        border-bottom: 1px solid color-mix(in srgb, var(--rz-danger) 22%, transparent);
+        padding: 14px 20px;
+    }
+    .ce-error-banner-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .ce-error-pulse {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--rz-danger);
+        flex-shrink: 0;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--rz-danger) 22%, transparent);
+    }
+    .ce-error-banner-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--rz-danger);
+    }
+    .ce-error-msg {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--rz-danger);
+        line-height: 1.5;
+        padding-left: 14px;
+    }
+    .ce-error-msg + .ce-error-msg { margin-top: 4px; }
+
+    /* ── Metadata grid ───────────────────────────────────────── */
+    .ce-meta-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 9px 14px;
+        align-items: baseline;
+    }
+    .ce-meta-key {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--rz-text-disabled-color);
+        white-space: nowrap;
+    }
+    .ce-meta-val {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--rz-text-secondary-color);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Field label ─────────────────────────────────────────── */
+    .ce-field-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--rz-text-secondary-color);
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    /* ── Media preview ───────────────────────────────────────── */
+    .ce-media-wrap {
+        display: block;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--rz-border-color) 70%, transparent);
+        background: var(--rz-secondary-lighter);
+        margin-bottom: 10px;
+    }
+    .ce-media-wrap img {
+        display: block;
+        max-height: 200px;
+        width: 100%;
+        object-fit: contain;
+    }
+
+    /* ── Not found ───────────────────────────────────────────── */
+    .ce-not-found {
+        border: 1px solid color-mix(in srgb, var(--rz-danger) 25%, transparent);
+        background: color-mix(in srgb, var(--rz-danger) 5%, var(--rz-base-background-color));
+        border-radius: 16px;
+        padding: 20px 24px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--rz-danger);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .ce-not-found-pulse {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--rz-danger);
+        flex-shrink: 0;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--rz-danger) 22%, transparent);
+    }
+</style>
+
+<!-- STICKY HEADER -->
+<div class="ce-header">
     <div>
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-            <a href="/admin/collections/@Slug"
-               style="font-size:12px;color:var(--rz-text-secondary-color);text-decoration:none;font-weight:500">
-                @collection?.Label
-            </a>
-            <span style="font-size:12px;color:var(--rz-text-disabled-color)">/</span>
-            <span style="font-size:12px;color:var(--rz-text-secondary-color);font-weight:500">
-                @(isNew ? "Create" : "Edit")
-            </span>
-        </div>
-        <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin:0;line-height:1.2">
-            @(isNew ? $"New {collection?.Label}" : $"Edit {collection?.Label}")
-        </RadzenText>
+        <nav class="ce-breadcrumb">
+            <a href="/admin/collections/@Slug">@collection?.Label</a>
+            <span class="sep">/</span>
+            <span class="crumb-current">@(isNew ? "New document" : "Edit document")</span>
+        </nav>
+        <h1 class="ce-title">@(isNew ? $"New {collection?.Label}" : $"Edit {collection?.Label}")</h1>
     </div>
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="8px" Style="margin-top:4px">
-        <RadzenButton Text="Cancel"
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="8px" AlignItems="AlignItems.Center">
+        @if (isSaving)
+        {
+            <span class="ce-saving-label">Saving…</span>
+        }
+        <RadzenButton Text="Discard"
                       Variant="Variant.Text"
                       ButtonStyle="ButtonStyle.Base"
                       Click="@(() => Nav.NavigateTo($"/admin/collections/{Slug}"))" />
-        
         @if (collection?.SaveOption == SaveOption.Save)
         {
-            <RadzenButton Text="Save"
+            <RadzenButton Text="@(isSaving ? "Saving…" : "Save")"
                           ButtonStyle="ButtonStyle.Primary"
                           Disabled="@isSaving"
                           Click="@(() => OnSaveClick(null))" />
         }
         else if (collection is not null)
         {
-            <RadzenSplitButton Click="@OnSaveClick" Text="Save" Disabled="@isSaving" ButtonStyle="ButtonStyle.Primary">                                                                                                                                                                                                                                                                                                                    
-                  <ChildContent>                                                                                                                                                                                                                                                                                                                                                                                                             
-                      @if (collection.SaveOption.HasFlag(SaveOption.SaveAndStayHere))                                                                                                                                                                                                                                                                                                                                                      
-                      {                                                                                                                                                                                                                                                                                                                                                                                                                      
-                          <RadzenSplitButtonItem Text="Save and Stay Here" Value="stay" />
-                      }
-                      @if (collection.SaveOption.HasFlag(SaveOption.SaveAndClone))
-                      {
-                          <RadzenSplitButtonItem Text="Save and Clone" Value="clone" />
-                      }
-                      @if (collection.SaveOption.HasFlag(SaveOption.SaveAndGoToNext))
-                      {
-                          <RadzenSplitButtonItem Text="Save and Go to Next" Value="next" />
-                      }
-                      @foreach (var action in collection.CustomSaveActions)
-                      {
-                          <RadzenSplitButtonItem Text="@action.Label" Value="@action.Value" />
-                      }
-                  </ChildContent>
-              </RadzenSplitButton>
-
+            <RadzenSplitButton Click="@OnSaveClick"
+                               Text="@(isSaving ? "Saving…" : "Save")"
+                               Disabled="@isSaving"
+                               ButtonStyle="ButtonStyle.Primary">
+                <ChildContent>
+                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndStayHere))
+                    {
+                        <RadzenSplitButtonItem Text="Save and stay here" Value="stay" />
+                    }
+                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndClone))
+                    {
+                        <RadzenSplitButtonItem Text="Save and clone" Value="clone" />
+                    }
+                    @if (collection.SaveOption.HasFlag(SaveOption.SaveAndGoToNext))
+                    {
+                        <RadzenSplitButtonItem Text="Save and go to next" Value="next" />
+                    }
+                    @foreach (var action in collection.CustomSaveActions)
+                    {
+                        <RadzenSplitButtonItem Text="@action.Label" Value="@action.Value" />
+                    }
+                </ChildContent>
+            </RadzenSplitButton>
         }
-
     </RadzenStack>
 </div>
 
 @if (notFound)
 {
-    <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" Variant="Variant.Flat">
+    <div class="ce-not-found">
+        <span class="ce-not-found-pulse"></span>
         @(collection is null ? $"Collection \"{Slug}\" does not exist." : "Document not found.")
-    </RadzenAlert>
+    </div>
 }
 else @if (document is not null && collection is not null)
 {
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="20px" AlignItems="AlignItems.Start">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="24px" AlignItems="AlignItems.Start">
 
         <!-- MAIN -->
         <div style="flex:1;min-width:0">
-            <RadzenCard Style="padding:0;overflow:hidden">
+            <div class="ce-card">
                 @{
                     var ungrouped = collection.Fields.Where(f => f.GroupSettings is null).ToList();
                     var mainGroups = collection.Fields
@@ -95,8 +308,8 @@ else @if (document is not null && collection is not null)
                 }
                 @if (ungrouped.Count > 0)
                 {
-                    <div style="padding:28px">
-                        <RadzenStack Gap="20px">
+                    <div class="ce-section">
+                        <RadzenStack Gap="28px">
                             @foreach (var field in ungrouped)
                             {
                                 @RenderField(field)
@@ -106,12 +319,9 @@ else @if (document is not null && collection is not null)
                 }
                 @foreach (var group in mainGroups)
                 {
-                    <div style="border-top:1px solid var(--rz-border-color);padding:28px">
-                        <RadzenText TextStyle="TextStyle.Subtitle2"
-                                    Style="font-weight:600;margin-bottom:20px;color:var(--rz-text-secondary-color);text-transform:uppercase;font-size:2rem;letter-spacing:0.06em">
-                            @group.Key
-                        </RadzenText>
-                        <RadzenStack Gap="20px">
+                    <div class="ce-section">
+                        <p class="ce-section-title">@group.Key</p>
+                        <RadzenStack Gap="28px">
                             @foreach (var field in group)
                             {
                                 @RenderField(field)
@@ -119,91 +329,55 @@ else @if (document is not null && collection is not null)
                         </RadzenStack>
                     </div>
                 }
-            </RadzenCard>
+            </div>
         </div>
 
-        <!-- SIDEBAR -->
-        <RadzenStack Style="width:272px;flex-shrink:0;position:sticky;top:24px" Gap="12px">
+        <!-- SIDEBAR: unified panel -->
+        <div class="ce-sidebar">
 
             @if (validationErrors.Count > 0)
             {
-                <RadzenCard Style="padding:0;overflow:hidden">
-                    <div style="padding:12px 16px;border-bottom:1px solid var(--rz-danger);background:var(--rz-danger-lighter)">
-                        <RadzenText TextStyle="TextStyle.Subtitle2"
-                                    Style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--rz-danger)">
-                            Errors
-                        </RadzenText>
+                <div class="ce-error-banner">
+                    <div class="ce-error-banner-head">
+                        <span class="ce-error-pulse"></span>
+                        <span class="ce-error-banner-label">Validation errors</span>
                     </div>
-                    <div style="padding:14px 16px">
-                        <RadzenStack Gap="6px">
-                            @foreach (var error in validationErrors)
-                            {
-                                <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-danger)">
-                                    @error.Message
-                                </RadzenText>
-                            }
-                        </RadzenStack>
-                    </div>
-                </RadzenCard>
+                    @foreach (var error in validationErrors)
+                    {
+                        <div class="ce-error-msg">@error.Message</div>
+                    }
+                </div>
             }
 
             @foreach (var group in collection.Fields
                 .Where(f => f.GroupSettings is { Sidebar: true })
                 .GroupBy(f => f.GroupSettings!.Name))
             {
-                <RadzenCard Style="padding:0;overflow:hidden">
-                    <div style="padding:12px 16px;border-bottom:1px solid var(--rz-border-color)">
-                        <RadzenText TextStyle="TextStyle.Subtitle2"
-                                    Style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--rz-text-secondary-color)">
-                            @group.Key
-                        </RadzenText>
-                    </div>
-                    <div style="padding:14px 16px">
-                        <RadzenStack Gap="16px">
-                            @foreach (var field in group)
-                            {
-                                @RenderField(field)
-                            }
-                        </RadzenStack>
-                    </div>
-                </RadzenCard>
+                <div class="ce-sb-section">
+                    <span class="ce-sb-title">@group.Key</span>
+                    <RadzenStack Gap="16px">
+                        @foreach (var field in group)
+                        {
+                            @RenderField(field)
+                        }
+                    </RadzenStack>
+                </div>
             }
 
             @if (!isNew)
             {
-                <RadzenCard Style="padding:0;overflow:hidden">
-                    <div style="padding:12px 16px;border-bottom:1px solid var(--rz-border-color)">
-                        <RadzenText TextStyle="TextStyle.Subtitle2"
-                                    Style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--rz-text-secondary-color)">
-                            Details
-                        </RadzenText>
+                <div class="ce-sb-section">
+                    <span class="ce-sb-title">Details</span>
+                    <div class="ce-meta-grid">
+                        <span class="ce-meta-key">Created</span>
+                        <span class="ce-meta-val">@document.CreatedAt.ToString("MMM d, yyyy · h:mm tt")</span>
+                        <span class="ce-meta-key">Updated</span>
+                        <span class="ce-meta-val">@document.UpdatedAt.ToString("MMM d, yyyy · h:mm tt")</span>
                     </div>
-                    <div style="padding:14px 16px">
-                        <RadzenStack Gap="12px">
-                            <div>
-                                <RadzenText TextStyle="TextStyle.Caption"
-                                            Style="color:var(--rz-text-secondary-color);display:block;margin-bottom:2px">
-                                    Created
-                                </RadzenText>
-                                <RadzenText TextStyle="TextStyle.Body2">
-                                    @document.CreatedAt.ToString("MMM d, yyyy · hh:mm tt")
-                                </RadzenText>
-                            </div>
-                            <div>
-                                <RadzenText TextStyle="TextStyle.Caption"
-                                            Style="color:var(--rz-text-secondary-color);display:block;margin-bottom:2px">
-                                    Last updated
-                                </RadzenText>
-                                <RadzenText TextStyle="TextStyle.Body2">
-                                    @document.UpdatedAt.ToString("MMM d, yyyy · hh:mm tt")
-                                </RadzenText>
-                            </div>
-                        </RadzenStack>
-                    </div>
-                </RadzenCard>
+                </div>
             }
 
-        </RadzenStack>
+        </div>
 
     </RadzenStack>
 }
@@ -276,8 +450,7 @@ else @if (document is not null && collection is not null)
         <RadzenStack Gap="6px">
             @if (field.FieldType != FieldType.Bool)
             {
-                <RadzenLabel Text="@field.Label"
-                             Style="font-size:12px;font-weight:600;color:var(--rz-text-color)" />
+                <label class="ce-field-label">@field.Label</label>
             }
             @if (field.FieldType == FieldType.Text)
             {
@@ -384,12 +557,13 @@ else @if (document is not null && collection is not null)
 
                 @if (StorageProvider is not null && !string.IsNullOrEmpty(currentPath))
                 {
-                    <div style="margin-bottom:8px">
-                        <img src="@StorageProvider.GetPublicUrl(currentPath)"
-                             style="max-height:160px;max-width:100%;border-radius:4px;object-fit:contain" />
-                        <RadzenButton Text="Clear" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                    <div style="margin-bottom:10px">
+                        <div class="ce-media-wrap">
+                            <img src="@StorageProvider.GetPublicUrl(currentPath)" alt="Media preview" />
+                        </div>
+                        <RadzenButton Text="Remove" Size="ButtonSize.Small" Variant="Variant.Outlined"
                                       ButtonStyle="ButtonStyle.Danger"
-                                      Style="margin-top:6px;display:block"
+                                      Style="display:block"
                                       Click="@(() => formValues[field.PropertyName] = null)" />
                     </div>
                 }

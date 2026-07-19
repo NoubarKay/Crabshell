@@ -2,7 +2,7 @@
 @inject ICollectionService CollectionService
 @rendermode InteractiveServer
 
-<PageTitle>@(siteSettings?.SiteName ?? "Real Estate")</PageTitle>
+<PageTitle>@(siteSettings?.SiteName ?? "The Blog")</PageTitle>
 
 @if (isLoading)
 {
@@ -15,7 +15,7 @@ else
     <!-- HERO -->
     <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 55%,#0f3460 100%);border-radius:16px;padding:72px 48px;margin-bottom:40px;text-align:center">
         <RadzenText TextStyle="TextStyle.H2" Style="color:white;font-weight:800;margin-bottom:12px">
-            @(siteSettings?.SiteName ?? "Find Your Dream Home")
+            @(siteSettings?.SiteName ?? "The Blog")
         </RadzenText>
         @if (!string.IsNullOrWhiteSpace(siteSettings?.Tagline))
         {
@@ -23,54 +23,77 @@ else
                 @siteSettings.Tagline
             </RadzenText>
         }
-        <RadzenButton Text="Browse All Listings" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Large"
-                      NavigateUrl="/listings" Style="margin-top:8px" />
+        <RadzenButton Text="Browse All Posts" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Large"
+                      NavigateUrl="/blog" Style="margin-top:8px" />
     </div>
 
     <!-- STATS -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:48px">
         <div style="background:var(--rz-base-background-color);border:1px solid var(--rz-border-color);border-radius:12px;padding:28px;text-align:center">
-            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@activeCount</RadzenText>
-            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Active Listings</RadzenText>
+            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@publishedCount</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Published Posts</RadzenText>
         </div>
         <div style="background:var(--rz-base-background-color);border:1px solid var(--rz-border-color);border-radius:12px;padding:28px;text-align:center">
-            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@agentCount</RadzenText>
-            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Agents</RadzenText>
+            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@authorCount</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Authors</RadzenText>
         </div>
         <div style="background:var(--rz-base-background-color);border:1px solid var(--rz-border-color);border-radius:12px;padding:28px;text-align:center">
-            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@neighborhoodCount</RadzenText>
-            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Neighborhoods</RadzenText>
+            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;color:var(--rz-primary);margin:0">@categoryCount</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);margin:0">Categories</RadzenText>
         </div>
     </div>
 
-    <!-- FEATURED LISTINGS -->
-    @if (featuredListings.Count > 0)
+    <!-- FEATURED POSTS -->
+    @if (featuredPosts.Count > 0)
     {
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween"
                      AlignItems="AlignItems.Center" Style="margin-bottom:20px">
-            <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin:0">Featured Listings</RadzenText>
+            <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin:0">Featured Posts</RadzenText>
             <RadzenButton Text="View All" Variant="Variant.Text" ButtonStyle="ButtonStyle.Primary"
-                          NavigateUrl="/listings" />
+                          NavigateUrl="/blog" />
         </RadzenStack>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px">
-            @foreach (var listing in featuredListings)
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;margin-bottom:48px">
+            @foreach (var post in featuredPosts)
             {
-                <ListingCard Listing="listing" />
+                <PostCard Post="post" CategoryName="@categoryNames.GetValueOrDefault(post.CategoryId)"
+                          AuthorName="@authorNames.GetValueOrDefault(post.AuthorId)" />
             }
         </div>
     }
-    else
+
+    <!-- LATEST POSTS -->
+    @if (latestPosts.Count > 0)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween"
+                     AlignItems="AlignItems.Center" Style="margin-bottom:20px">
+            <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin:0">Latest Posts</RadzenText>
+            <RadzenButton Text="View All" Variant="Variant.Text" ButtonStyle="ButtonStyle.Primary"
+                          NavigateUrl="/blog" />
+        </RadzenStack>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px">
+            @foreach (var post in latestPosts)
+            {
+                <PostCard Post="post" CategoryName="@categoryNames.GetValueOrDefault(post.CategoryId)"
+                          AuthorName="@authorNames.GetValueOrDefault(post.AuthorId)" />
+            }
+        </div>
+    }
+
+    @if (featuredPosts.Count == 0 && latestPosts.Count == 0)
     {
         <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
-            No featured listings yet. Add some from the <a href="/admin">admin panel</a>.
+            No published posts yet. Add some from the <a href="/admin">admin panel</a>.
         </RadzenAlert>
     }
 }
 
 @code {
     private SiteSettings? siteSettings;
-    private List<Listing> featuredListings = [];
-    private int activeCount, agentCount, neighborhoodCount;
+    private List<BlogPost> featuredPosts = [];
+    private List<BlogPost> latestPosts = [];
+    private Dictionary<Guid, string?> authorNames = new();
+    private Dictionary<Guid, string?> categoryNames = new();
+    private int publishedCount, authorCount, categoryCount;
     private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -79,19 +102,32 @@ else
         if (settingsResult is Result<CrabshellDocument>.Ok { Value: var rawSettings })
             siteSettings = rawSettings as SiteSettings;
 
-        var listingsResult = await CollectionService.GetPageAsync("listings", new CollectionQuery(Take: 1000));
-        if (listingsResult is Result<PagedResult>.Ok { Value: var lp })
+        var authorsResult = await CollectionService.GetPageAsync("authors", new CollectionQuery(Take: 1000));
+        if (authorsResult is Result<PagedResult>.Ok { Value: var ap })
         {
-            var all = lp.Items.OfType<Listing>().ToList();
-            activeCount = all.Count(l => l.Status == ListingStatus.Active);
-            featuredListings = all.Where(l => l.IsFeatured && l.Status == ListingStatus.Active).Take(6).ToList();
+            authorCount = ap.TotalCount;
+            foreach (var a in ap.Items.OfType<Author>())
+                authorNames[a.Id] = a.Name;
         }
 
-        var agentsResult = await CollectionService.GetPageAsync("agents", new CollectionQuery(Take: 1));
-        if (agentsResult is Result<PagedResult>.Ok { Value: var ap }) agentCount = ap.TotalCount;
+        var categoriesResult = await CollectionService.GetPageAsync("categories", new CollectionQuery(Take: 1000));
+        if (categoriesResult is Result<PagedResult>.Ok { Value: var cp })
+        {
+            categoryCount = cp.TotalCount;
+            foreach (var c in cp.Items.OfType<Category>())
+                categoryNames[c.Id] = c.Name;
+        }
 
-        var nbResult = await CollectionService.GetPageAsync("neighborhoods", new CollectionQuery(Take: 1));
-        if (nbResult is Result<PagedResult>.Ok { Value: var np }) neighborhoodCount = np.TotalCount;
+        var postsResult = await CollectionService.GetPageAsync("blog_posts",
+            new CollectionQuery(Take: 1000, OrderBy: nameof(BlogPost.PublishedAt), Descending: true,
+                Filters: [new FieldFilter(nameof(BlogPost.Status), FieldFilterOperator.Equals, PostStatus.Published.ToString())]));
+        if (postsResult is Result<PagedResult>.Ok { Value: var pp })
+        {
+            var all = pp.Items.OfType<BlogPost>().ToList();
+            publishedCount = all.Count;
+            featuredPosts  = all.Where(p => p.IsFeatured).Take(3).ToList();
+            latestPosts    = all.Except(featuredPosts).Take(6).ToList();
+        }
 
         isLoading = false;
     }

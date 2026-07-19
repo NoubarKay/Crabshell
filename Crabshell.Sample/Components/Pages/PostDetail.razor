@@ -1,0 +1,250 @@
+@page "/blog/{Slug}"
+@inject ICollectionService CollectionService
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>@(post?.MetaTitle ?? post?.Title ?? "Post")</PageTitle>
+
+@if (isLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" Style="padding:80px">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (post is null)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" AllowClose="false">Post not found.</RadzenAlert>
+}
+else
+{
+    <RadzenButton Text="← Back to Blog" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary"
+                  Style="margin-bottom:20px" NavigateUrl="/blog" />
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="32px" AlignItems="AlignItems.Start">
+
+        <!-- MAIN -->
+        <div style="flex:1;min-width:0">
+
+            <!-- COVER IMAGE -->
+            @if (!string.IsNullOrWhiteSpace(post.CoverImage))
+            {
+                <div style="border-radius:12px;overflow:hidden;margin-bottom:28px;max-height:400px">
+                    <img src="@post.CoverImage" alt="@post.Title"
+                         style="width:100%;height:400px;object-fit:cover" />
+                </div>
+            }
+            else
+            {
+                <div style="background:linear-gradient(135deg,var(--rz-primary-lighter),var(--rz-primary-light));border-radius:12px;height:200px;display:flex;align-items:center;justify-content:center;margin-bottom:28px">
+                    <RadzenIcon Icon="article" Style="font-size:64px;color:var(--rz-primary);opacity:0.35" />
+                </div>
+            }
+
+            <!-- META ROW -->
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" AlignItems="AlignItems.Center" Style="margin-bottom:16px;flex-wrap:wrap">
+                @if (category is not null)
+                {
+                    <RadzenBadge Text="@category.Name" BadgeStyle="BadgeStyle.Primary"
+                                 Style="@(string.IsNullOrWhiteSpace(category.Color) ? "" : $"background:{category.Color};color:#fff")" />
+                }
+                @if (post.PublishedAt.HasValue)
+                {
+                    <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">
+                        @post.PublishedAt.Value.ToString("MMMM d, yyyy")
+                    </RadzenText>
+                }
+                @if (post.ReadTimeMinutes.HasValue)
+                {
+                    <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">
+                        · @post.ReadTimeMinutes min read
+                    </RadzenText>
+                }
+            </RadzenStack>
+
+            <!-- TITLE -->
+            <RadzenText TextStyle="TextStyle.H3" Style="font-weight:800;margin:0 0 12px">@post.Title</RadzenText>
+
+            <!-- EXCERPT -->
+            @if (!string.IsNullOrWhiteSpace(post.Excerpt))
+            {
+                <RadzenText TextStyle="TextStyle.H6" Style="color:var(--rz-text-secondary-color);margin-bottom:28px;font-weight:400;line-height:1.6">
+                    @post.Excerpt
+                </RadzenText>
+            }
+
+            <!-- CONTENT -->
+            @if (!string.IsNullOrWhiteSpace(post.Content))
+            {
+                <RadzenCard Style="padding:32px">
+                    <div class="blog-content">
+                        @((MarkupString)post.Content)
+                    </div>
+                </RadzenCard>
+            }
+
+            <!-- TAGS -->
+            @if (!string.IsNullOrWhiteSpace(post.Tags))
+            {
+                <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="8px" Style="margin-top:24px">
+                    @foreach (var tag in post.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        <RadzenBadge BadgeStyle="BadgeStyle.Light" Text="@tag" />
+                    }
+                </RadzenStack>
+            }
+
+            <!-- RELATED POSTS -->
+            @if (relatedPosts.Count > 0)
+            {
+                <div style="margin-top:48px">
+                    <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin-bottom:20px">Related Posts</RadzenText>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+                        @foreach (var related in relatedPosts)
+                        {
+                            <PostCard Post="related"
+                                      CategoryName="@(category?.Name)"
+                                      AuthorName="@authorNames.GetValueOrDefault(related.AuthorId)" />
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- SIDEBAR -->
+        <RadzenStack Style="width:260px;flex-shrink:0" Gap="16px">
+
+            <!-- AUTHOR -->
+            @if (author is not null)
+            {
+                <RadzenCard Style="padding:0;overflow:hidden">
+                    <div style="padding:12px 16px;border-bottom:1px solid var(--rz-border-color)">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--rz-text-secondary-color)">Author</RadzenText>
+                    </div>
+                    <div style="padding:16px">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+                            @if (!string.IsNullOrWhiteSpace(author.Avatar))
+                            {
+                                <img src="@author.Avatar" alt="@author.Name"
+                                     style="width:48px;height:48px;border-radius:50%;object-fit:cover" />
+                            }
+                            else
+                            {
+                                <div style="width:48px;height:48px;border-radius:50%;background:var(--rz-primary-lighter);display:flex;align-items:center;justify-content:center">
+                                    <RadzenIcon Icon="person" Style="color:var(--rz-primary)" />
+                                </div>
+                            }
+                            <div>
+                                <RadzenText TextStyle="TextStyle.Subtitle1" Style="font-weight:700;margin:0">@author.Name</RadzenText>
+                                @if (!string.IsNullOrWhiteSpace(author.Email))
+                                {
+                                    <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">@author.Email</RadzenText>
+                                }
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(author.Bio))
+                        {
+                            <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color);line-height:1.5">
+                                @(author.Bio.Length > 160 ? author.Bio[..160] + "…" : author.Bio)
+                            </RadzenText>
+                        }
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="8px" Style="margin-top:10px">
+                            @if (!string.IsNullOrWhiteSpace(author.Twitter))
+                            {
+                                <RadzenButton Text="X / Twitter" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary"
+                                              Size="ButtonSize.ExtraSmall" Icon="tag" />
+                            }
+                            @if (!string.IsNullOrWhiteSpace(author.LinkedIn))
+                            {
+                                <RadzenButton Text="LinkedIn" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary"
+                                              Size="ButtonSize.ExtraSmall" Icon="link" />
+                            }
+                        </RadzenStack>
+                        <RadzenButton Text="All posts by this author" Variant="Variant.Outlined"
+                                      ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                                      Style="width:100%;margin-top:12px"
+                                      NavigateUrl="@($"/authors/{author.Slug}")" />
+                    </div>
+                </RadzenCard>
+            }
+
+            <!-- CATEGORY -->
+            @if (category is not null)
+            {
+                <RadzenCard Style="padding:0;overflow:hidden">
+                    <div style="padding:12px 16px;border-bottom:1px solid var(--rz-border-color)">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--rz-text-secondary-color)">Category</RadzenText>
+                    </div>
+                    <div style="padding:14px 16px">
+                        <RadzenBadge Text="@category.Name" BadgeStyle="BadgeStyle.Primary"
+                                     Style="@(string.IsNullOrWhiteSpace(category.Color) ? "" : $"background:{category.Color};color:#fff")" />
+                        @if (!string.IsNullOrWhiteSpace(category.Description))
+                        {
+                            <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color);margin-top:8px">
+                                @category.Description
+                            </RadzenText>
+                        }
+                    </div>
+                </RadzenCard>
+            }
+
+        </RadzenStack>
+    </RadzenStack>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = default!;
+
+    private BlogPost? post;
+    private Author?   author;
+    private Category? category;
+    private List<BlogPost> relatedPosts = [];
+    private Dictionary<Guid, string?> authorNames = new();
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        post = null; author = null; category = null; relatedPosts = [];
+
+        var result = await CollectionService.GetPageAsync("blog_posts",
+            new CollectionQuery(Take: 1, Filters: [
+                new FieldFilter(nameof(BlogPost.Slug), FieldFilterOperator.Equals, Slug)
+            ]));
+
+        if (result is Result<PagedResult>.Ok { Value: var page })
+            post = page.Items.OfType<BlogPost>().FirstOrDefault();
+
+        if (post is null) { isLoading = false; return; }
+
+        if (post.AuthorId != Guid.Empty)
+        {
+            var ar = await CollectionService.GetByIdAsync("authors", post.AuthorId);
+            if (ar is Result<CrabshellDocument?>.Ok { Value: var ra }) author = ra as Author;
+        }
+
+        if (post.CategoryId != Guid.Empty)
+        {
+            var cr = await CollectionService.GetByIdAsync("categories", post.CategoryId);
+            if (cr is Result<CrabshellDocument?>.Ok { Value: var rc }) category = rc as Category;
+        }
+
+        if (post.CategoryId != Guid.Empty)
+        {
+            var relResult = await CollectionService.GetPageAsync("blog_posts",
+                new CollectionQuery(Take: 3, OrderBy: nameof(BlogPost.PublishedAt), Descending: true,
+                    Filters: [
+                        new FieldFilter(nameof(BlogPost.Status),     FieldFilterOperator.Equals, PostStatus.Published.ToString()),
+                        new FieldFilter(nameof(BlogPost.CategoryId), FieldFilterOperator.Equals, post.CategoryId.ToString())
+                    ]));
+            if (relResult is Result<PagedResult>.Ok { Value: var rp })
+                relatedPosts = rp.Items.OfType<BlogPost>().Where(p => p.Id != post.Id).Take(3).ToList();
+        }
+
+        var authorsResult = await CollectionService.GetPageAsync("authors", new CollectionQuery(Take: 1000));
+        if (authorsResult is Result<PagedResult>.Ok { Value: var ap })
+            foreach (var a in ap.Items.OfType<Author>())
+                authorNames[a.Id] = a.Name;
+
+        isLoading = false;
+    }
+}

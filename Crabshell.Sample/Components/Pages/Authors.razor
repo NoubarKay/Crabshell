@@ -1,0 +1,105 @@
+@page "/authors"
+@inject ICollectionService CollectionService
+@rendermode InteractiveServer
+
+<PageTitle>Authors</PageTitle>
+
+<RadzenText TextStyle="TextStyle.H4" Style="font-weight:700;margin-bottom:24px">Authors</RadzenText>
+
+@if (isLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" Style="padding:80px">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (authors.Count == 0)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+        No authors yet. Add some from the <a href="/admin">admin panel</a>.
+    </RadzenAlert>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px">
+        @foreach (var author in authors)
+        {
+            <RadzenCard Style="padding:0;overflow:hidden">
+                <!-- AVATAR BANNER -->
+                <div style="background:linear-gradient(135deg,var(--rz-primary-lighter),var(--rz-primary-light));height:80px;display:flex;align-items:center;justify-content:center">
+                    @if (!string.IsNullOrWhiteSpace(author.Avatar))
+                    {
+                        <img src="@author.Avatar" alt="@author.Name"
+                             style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid white;margin-top:32px" />
+                    }
+                    else
+                    {
+                        <RadzenIcon Icon="person" Style="font-size:40px;color:var(--rz-primary);opacity:0.35" />
+                    }
+                </div>
+                <div style="padding:16px;@(!string.IsNullOrWhiteSpace(author.Avatar) ? "padding-top:40px" : "")">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween"
+                                 AlignItems="AlignItems.Start" Style="margin-bottom:6px">
+                        <RadzenText TextStyle="TextStyle.Subtitle1" Style="font-weight:700;margin:0">@author.Name</RadzenText>
+                        <RadzenBadge BadgeStyle="@(author.IsActive ? BadgeStyle.Success : BadgeStyle.Light)"
+                                     Text="@(author.IsActive ? "Active" : "Inactive")" />
+                    </RadzenStack>
+
+                    <RadzenStack Gap="6px" Style="margin-bottom:10px">
+                        @if (!string.IsNullOrWhiteSpace(author.Email))
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="6px" AlignItems="AlignItems.Center">
+                                <RadzenIcon Icon="email" Style="font-size:14px;color:var(--rz-text-secondary-color)" />
+                                <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color)">@author.Email</RadzenText>
+                            </RadzenStack>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(author.Twitter))
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="6px" AlignItems="AlignItems.Center">
+                                <RadzenIcon Icon="tag" Style="font-size:14px;color:var(--rz-text-secondary-color)" />
+                                <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color)">@author.Twitter</RadzenText>
+                            </RadzenStack>
+                        }
+                    </RadzenStack>
+
+                    @if (!string.IsNullOrWhiteSpace(author.Bio))
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color);margin-bottom:12px;line-height:1.5">
+                            @(author.Bio.Length > 100 ? author.Bio[..100] + "…" : author.Bio)
+                        </RadzenText>
+                    }
+
+                    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;border-top:1px solid var(--rz-border-color);padding-top:10px">
+                        <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color);flex:1">
+                            @postCounts.GetValueOrDefault(author.Id, 0) post@(postCounts.GetValueOrDefault(author.Id, 0) == 1 ? "" : "s")
+                        </RadzenText>
+                        <RadzenButton Text="View Profile" Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Primary"
+                                      Size="ButtonSize.Small" NavigateUrl="@($"/authors/{author.Slug}")" />
+                    </div>
+                </div>
+            </RadzenCard>
+        }
+    </div>
+}
+
+@code {
+    private List<Author> authors = [];
+    private Dictionary<Guid, int> postCounts = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authorsResult = await CollectionService.GetPageAsync("authors",
+            new CollectionQuery(Take: 1000, OrderBy: nameof(Author.Name)));
+        if (authorsResult is Result<PagedResult>.Ok { Value: var ap })
+            authors = ap.Items.OfType<Author>().ToList();
+
+        var postsResult = await CollectionService.GetPageAsync("blog_posts",
+            new CollectionQuery(Take: 1000,
+                Filters: [new FieldFilter(nameof(BlogPost.Status), FieldFilterOperator.Equals, PostStatus.Published.ToString())]));
+        if (postsResult is Result<PagedResult>.Ok { Value: var pp })
+            foreach (var post in pp.Items.OfType<BlogPost>())
+                postCounts[post.AuthorId] = postCounts.GetValueOrDefault(post.AuthorId) + 1;
+
+        isLoading = false;
+    }
+}

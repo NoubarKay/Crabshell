@@ -36,7 +36,11 @@ public class CollectionRepository : ICollectionRepository
             var param = Expression.Parameter(typeof(CrabshellDocument), "doc");
             var prop = Expression.Property(Expression.Convert(param, collection.ClrType), filter.Property);
             var underlyingType = Nullable.GetUnderlyingType(fieldMeta.ClrType) ?? fieldMeta.ClrType;
-            var converted = Convert.ChangeType(filter.Value, underlyingType);
+            var converted = underlyingType.IsEnum
+                ? Enum.Parse(underlyingType, filter.Value.ToString()!)
+                : underlyingType == typeof(Guid)
+                    ? Guid.Parse(filter.Value.ToString()!)
+                    : Convert.ChangeType(filter.Value, underlyingType);
             var constant = Expression.Constant(converted, fieldMeta.ClrType);
 
             Expression? body = filter.Operator switch

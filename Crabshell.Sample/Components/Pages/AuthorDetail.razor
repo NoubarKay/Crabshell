@@ -1,0 +1,138 @@
+@page "/authors/{Slug}"
+@inject ICollectionService CollectionService
+@rendermode InteractiveServer
+
+<PageTitle>@(author?.Name ?? "Author")</PageTitle>
+
+@if (isLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" Style="padding:80px">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (author is null)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" AllowClose="false">Author not found.</RadzenAlert>
+}
+else
+{
+    <RadzenButton Text="← Back to Authors" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary"
+                  Style="margin-bottom:20px" NavigateUrl="/authors" />
+
+    <!-- PROFILE HEADER -->
+    <RadzenCard Style="margin-bottom:32px;padding:28px">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="24px" AlignItems="AlignItems.Start">
+            @if (!string.IsNullOrWhiteSpace(author.Avatar))
+            {
+                <img src="@author.Avatar" alt="@author.Name"
+                     style="width:96px;height:96px;border-radius:50%;object-fit:cover;flex-shrink:0" />
+            }
+            else
+            {
+                <div style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--rz-primary-lighter),var(--rz-primary-light));display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <RadzenIcon Icon="person" Style="font-size:48px;color:var(--rz-primary);opacity:0.6" />
+                </div>
+            }
+            <div style="flex:1">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="12px" Style="margin-bottom:6px">
+                    <RadzenText TextStyle="TextStyle.H4" Style="font-weight:800;margin:0">@author.Name</RadzenText>
+                    <RadzenBadge BadgeStyle="@(author.IsActive ? BadgeStyle.Success : BadgeStyle.Light)"
+                                 Text="@(author.IsActive ? "Active" : "Inactive")" />
+                </RadzenStack>
+
+                @if (!string.IsNullOrWhiteSpace(author.Email))
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-primary);margin-bottom:8px">@author.Email</RadzenText>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(author.Bio))
+                {
+                    <RadzenText TextStyle="TextStyle.Body1" Style="color:var(--rz-text-secondary-color);line-height:1.6;margin-bottom:12px">
+                        @author.Bio
+                    </RadzenText>
+                }
+
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="10px">
+                    @if (!string.IsNullOrWhiteSpace(author.Twitter))
+                    {
+                        <RadzenBadge BadgeStyle="BadgeStyle.Light" Text="@($"@{author.Twitter.TrimStart('@')}")" />
+                    }
+                    @if (!string.IsNullOrWhiteSpace(author.LinkedIn))
+                    {
+                        <RadzenBadge BadgeStyle="BadgeStyle.Light" Text="LinkedIn" />
+                    }
+                    @if (!string.IsNullOrWhiteSpace(author.Website))
+                    {
+                        <RadzenBadge BadgeStyle="BadgeStyle.Light" Text="Website" />
+                    }
+                </RadzenStack>
+            </div>
+
+            <div style="text-align:center;padding:16px;background:var(--rz-base-100);border-radius:10px;min-width:80px">
+                <RadzenText TextStyle="TextStyle.H4" Style="font-weight:800;color:var(--rz-primary);margin:0">@posts.Count</RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-text-secondary-color)">Posts</RadzenText>
+            </div>
+        </RadzenStack>
+    </RadzenCard>
+
+    <!-- POSTS -->
+    @if (posts.Count == 0)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+            No published posts from this author yet.
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;margin-bottom:20px">Posts by @author.Name</RadzenText>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px">
+            @foreach (var post in posts)
+            {
+                <PostCard Post="post"
+                          CategoryName="@categoryNames.GetValueOrDefault(post.CategoryId)"
+                          AuthorName="@author.Name" />
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = default!;
+
+    private Author? author;
+    private List<BlogPost> posts = [];
+    private Dictionary<Guid, string?> categoryNames = new();
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        author = null; posts = []; categoryNames = new();
+
+        var authorResult = await CollectionService.GetPageAsync("authors",
+            new CollectionQuery(Take: 1, Filters: [
+                new FieldFilter(nameof(Author.Slug), FieldFilterOperator.Equals, Slug)
+            ]));
+
+        if (authorResult is Result<PagedResult>.Ok { Value: var ap })
+            author = ap.Items.OfType<Author>().FirstOrDefault();
+
+        if (author is null) { isLoading = false; return; }
+
+        var postsResult = await CollectionService.GetPageAsync("blog_posts",
+            new CollectionQuery(Take: 1000, OrderBy: nameof(BlogPost.PublishedAt), Descending: true,
+                Filters: [
+                    new FieldFilter(nameof(BlogPost.Status),   FieldFilterOperator.Equals, PostStatus.Published.ToString()),
+                    new FieldFilter(nameof(BlogPost.AuthorId), FieldFilterOperator.Equals, author.Id.ToString())
+                ]));
+        if (postsResult is Result<PagedResult>.Ok { Value: var pp })
+            posts = pp.Items.OfType<BlogPost>().ToList();
+
+        var categoriesResult = await CollectionService.GetPageAsync("categories", new CollectionQuery(Take: 1000));
+        if (categoriesResult is Result<PagedResult>.Ok { Value: var cp })
+            foreach (var c in cp.Items.OfType<Category>())
+                categoryNames[c.Id] = c.Name;
+
+        isLoading = false;
+    }
+}

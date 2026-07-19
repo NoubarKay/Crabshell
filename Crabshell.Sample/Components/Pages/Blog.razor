@@ -1,0 +1,99 @@
+@page "/blog"
+@inject ICollectionService CollectionService
+@rendermode InteractiveServer
+
+<PageTitle>Blog</PageTitle>
+
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween"
+             AlignItems="AlignItems.Center" Style="margin-bottom:24px">
+    <div>
+        <RadzenText TextStyle="TextStyle.H4" Style="font-weight:700;margin:0">Blog</RadzenText>
+        @if (!isLoading)
+        {
+            <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-text-secondary-color);margin:0">
+                @filtered.Count post@(filtered.Count == 1 ? "" : "s")
+            </RadzenText>
+        }
+    </div>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="12px" AlignItems="AlignItems.Center">
+        <RadzenLabel Text="Category" Style="font-size:12px;font-weight:600" />
+        <RadzenDropDown @bind-Value="categoryFilter"
+                        Data="@categoryOptions"
+                        TextProperty="Label"
+                        ValueProperty="Value"
+                        Change="@(_ => ApplyFilter())"
+                        Style="width:180px" />
+    </RadzenStack>
+</RadzenStack>
+
+@if (isLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" Style="padding:80px">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (filtered.Count == 0)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+        No posts match the selected filter.
+    </RadzenAlert>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px">
+        @foreach (var post in filtered)
+        {
+            <PostCard Post="post"
+                      CategoryName="@categoryNames.GetValueOrDefault(post.CategoryId)"
+                      AuthorName="@authorNames.GetValueOrDefault(post.AuthorId)" />
+        }
+    </div>
+}
+
+@code {
+    private List<BlogPost> all = [];
+    private List<BlogPost> filtered = [];
+    private Dictionary<Guid, string?> categoryNames = new();
+    private Dictionary<Guid, string?> authorNames   = new();
+    private bool isLoading = true;
+    private string categoryFilter = "all";
+
+    private record FilterOption(string Value, string Label);
+    private List<FilterOption> categoryOptions = [new("all", "All Categories")];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var categoriesResult = await CollectionService.GetPageAsync("categories", new CollectionQuery(Take: 1000, OrderBy: nameof(Category.Name)));
+        if (categoriesResult is Result<PagedResult>.Ok { Value: var cp })
+        {
+            foreach (var c in cp.Items.OfType<Category>())
+            {
+                categoryNames[c.Id] = c.Name;
+                categoryOptions.Add(new(c.Id.ToString(), c.Name));
+            }
+        }
+
+        var authorsResult = await CollectionService.GetPageAsync("authors", new CollectionQuery(Take: 1000));
+        if (authorsResult is Result<PagedResult>.Ok { Value: var ap })
+            foreach (var a in ap.Items.OfType<Author>())
+                authorNames[a.Id] = a.Name;
+
+        var postsResult = await CollectionService.GetPageAsync("blog_posts",
+            new CollectionQuery(Take: 1000, OrderBy: nameof(BlogPost.PublishedAt), Descending: true,
+                Filters: [new FieldFilter(nameof(BlogPost.Status), FieldFilterOperator.Equals, PostStatus.Published.ToString())]));
+        if (postsResult is Result<PagedResult>.Ok { Value: var pp })
+            all = pp.Items.OfType<BlogPost>().ToList();
+
+        ApplyFilter();
+        isLoading = false;
+    }
+
+    private void ApplyFilter()
+    {
+        filtered = categoryFilter == "all"
+            ? all
+            : Guid.TryParse(categoryFilter, out var catId)
+                ? all.Where(p => p.CategoryId == catId).ToList()
+                : all;
+    }
+}
