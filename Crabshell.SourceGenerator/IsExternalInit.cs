@@ -1,4 +1,4 @@
 // Polyfill required for 'record' and 'init' setters when targeting netstandard2.0
-namespace System.Runtime.CompilerServices;
+namespace Crabshell.SourceGenerator;
 
 internal static class IsExternalInit { }

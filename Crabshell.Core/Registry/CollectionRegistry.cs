@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Crabshell.Core.Attributes;
@@ -16,8 +15,18 @@ public sealed class CollectionRegistry
 
     private static readonly HashSet<string> _baseProperties = ["Id", "CreatedAt", "UpdatedAt"];
     private static readonly Regex _safeSlug = new(@"^[a-z][a-z0-9_]*$", RegexOptions.Compiled);
+    private static readonly IReadOnlyList<IFieldParser> _fieldParsers =
+    [
+        new TextFieldParser(),
+        new SelectFieldParser(),
+        new RelationshipFieldParser(),
+        new BoolFieldParser(),
+        new DateTimeFieldParser(),
+        new NumberFieldParser(),
+        new RichTextFieldParser(),
+        new MediaFieldParser(),
+    ];
 
-    
     public void Register(Assembly assembly)
     {
         var collectionTypes = assembly.GetTypes()
@@ -84,133 +93,29 @@ public sealed class CollectionRegistry
 
         foreach (var p in type.GetProperties().Where(p => !_baseProperties.Contains(p.Name)))
         {
-            var fieldAttrCount = new[]
-            {
-                p.GetCustomAttribute<TextFieldAttribute>() is not null,
-                p.GetCustomAttribute<SelectFieldAttribute>() is not null,
-                p.GetCustomAttribute<RelationshipFieldAttribute>() is not null,
-                p.GetCustomAttribute<BoolFieldAttribute>() is not null,
-                p.GetCustomAttribute<DateTimeFieldAttribute>() is not null,
-                p.GetCustomAttribute<NumberFieldAttribute>() is not null,
-                p.GetCustomAttribute<RichTextFieldAttribute>() is not null,
-                p.GetCustomAttribute<MediaFieldAttribute>() is not null,
-            }.Count(x => x);
+            var matches = _fieldParsers
+                .Select(parser => (parser, attr: (CrabshellFieldAttribute?)p.GetCustomAttribute(parser.AttributeType)))
+                .Where(x => x.attr is not null)
+                .ToList();
 
-            if (fieldAttrCount > 1)
+            if (matches.Count > 1)
                 throw new InvalidOperationException(
                     $"Property '{type.Name}.{p.Name}' has multiple field attributes. Only one is allowed.");
 
+            if (matches.Count == 0)
+                continue;
+
+            var (parser, attr) = matches[0];
             var groupAttr = p.GetCustomAttribute<FieldGroupAttribute>();
             var gridAttr  = p.GetCustomAttribute<GridOptionsAttribute>();
-            var accessors = BuildAccessors(p);
-
-            var textAttr = p.GetCustomAttribute<TextFieldAttribute>();
-            if (textAttr is not null)
-                fieldMetas.Add(CreateFieldMeta(p, textAttr, groupAttr, gridAttr, accessors,
-                    v => v,
-                    textSettings: new TextFieldSettings { MaxLength = textAttr.MaxLength, MinLength = textAttr.MinLength, Pattern = textAttr.Pattern }));
-
-            var selectAttr = p.GetCustomAttribute<SelectFieldAttribute>();
-            if (selectAttr is not null)
-            {
-                var enumType = Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType;
-                var options  = enumType.IsEnum ? Enum.GetNames(enumType) : selectAttr.Options ?? [];
-                fieldMetas.Add(CreateFieldMeta(p, selectAttr, groupAttr, gridAttr, accessors,
-                    enumType.IsEnum
-                        ? v => Enum.TryParse(enumType, v, ignoreCase: true, out var e) ? e : null
-                        : v => v,
-                    fieldType:      FieldType.Select,
-                    selectSettings: new SelectFieldSettings { Options = options }));
-            }
-
-            var relAttr = p.GetCustomAttribute<RelationshipFieldAttribute>();
-            if (relAttr is not null)
-            {
-                var relatedSlug = relAttr.RelatesTo.GetCustomAttribute<CollectionAttribute>()?.Slug;
-                fieldMetas.Add(CreateFieldMeta(p, relAttr, groupAttr, gridAttr, accessors,
-                    v => Guid.TryParse(v, out var g) ? g : null,
-                    fieldType:             FieldType.Relationship,
-                    relationshipSettings:  relatedSlug is null ? null : new RelationshipFieldSettings { Slug = relatedSlug }));
-            }
-
-            var boolAttr = p.GetCustomAttribute<BoolFieldAttribute>();
-            if (boolAttr is not null)
-                fieldMetas.Add(CreateFieldMeta(p, boolAttr, groupAttr, gridAttr, accessors,
-                    v => bool.TryParse(v, out var b) ? b : null,
-                    fieldType:    FieldType.Bool,
-                    boolSettings: new BoolFieldSettings { IsSwitch = boolAttr.IsSwitch }));
-
-            var dateTimeAttr = p.GetCustomAttribute<DateTimeFieldAttribute>();
-            if (dateTimeAttr is not null)
-                fieldMetas.Add(CreateFieldMeta(p, dateTimeAttr, groupAttr, gridAttr, accessors,
-                    v => DateTimeOffset.TryParse(v, out var dto)
-                        ? p.PropertyType == typeof(DateTime) || p.PropertyType == typeof(DateTime?)
-                            ? (object?)dto.UtcDateTime
-                            : dto
-                        : null,
-                    fieldType:        FieldType.DateTime,
-                    dateTimeSettings: new DateTimeFieldSettings
-                    {
-                        HasTime       = dateTimeAttr.HasTime,
-                        TimeOnly      = dateTimeAttr.TimeOnly,
-                        Utc           = dateTimeAttr.Utc,
-                        Min           = dateTimeAttr.Min,
-                        Max           = dateTimeAttr.Max,
-                        ShowNowButton = dateTimeAttr.ShowNowButton,
-                        HoursStep     = dateTimeAttr.HoursStep,
-                        MinutesStep   = dateTimeAttr.MinutesStep,
-                        SecondsStep   = dateTimeAttr.SecondsStep,
-                        Immediate     = dateTimeAttr.Immediate,
-                        Inline        = dateTimeAttr.Inline,
-                        ShowButton    = dateTimeAttr.ShowButton,
-                        YearRange     = dateTimeAttr.YearRange,
-                        DateFormat    = dateTimeAttr.DateFormat
-                    }));
-
-            var numberAttr = p.GetCustomAttribute<NumberFieldAttribute>();
-            if (numberAttr is not null)
-            {
-                var underlying = Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType;
-                Func<string?, object?> parser = underlying == typeof(int)     ? v => int.TryParse(v, out var i) ? i : null
-                                              : underlying == typeof(long)    ? v => long.TryParse(v, out var l) ? l : null
-                                              : underlying == typeof(decimal) ? v => decimal.TryParse(v, out var d) ? d : null
-                                              : v => double.TryParse(v, out var f) ? f : null;
-                fieldMetas.Add(CreateFieldMeta(p, numberAttr, groupAttr, gridAttr, accessors,
-                    parser,
-                    fieldType:      FieldType.Number,
-                    numberSettings: new NumberFieldSettings
-                    {
-                        Decimals = numberAttr.Decimals,
-                        Min      = double.IsNaN(numberAttr.Min) ? null : (decimal?)numberAttr.Min,
-                        Max      = double.IsNaN(numberAttr.Max) ? null : (decimal?)numberAttr.Max,
-                        Step     = numberAttr.Step,
-                        Prefix   = numberAttr.Prefix,
-                        Suffix   = numberAttr.Suffix,
-                        Format   = numberAttr.Format,
-                    }));
-            }
-
-            var richTextAttr = p.GetCustomAttribute<RichTextFieldAttribute>();
-            if (richTextAttr is not null)
-                fieldMetas.Add(CreateFieldMeta(p, richTextAttr, groupAttr, gridAttr, accessors,
-                    v => v,
-                    fieldType: FieldType.RichText));
-
-            var mediaAttr = p.GetCustomAttribute<MediaFieldAttribute>();
-            if (mediaAttr is not null)
-                fieldMetas.Add(CreateFieldMeta(p, mediaAttr, groupAttr, gridAttr, accessors,
-                    v => v,
-                    fieldType:     FieldType.Media,
-                    mediaSettings: new MediaFieldSettings { Accept = mediaAttr.Accept, MaxSizeMb = mediaAttr.MaxSizeMb }));
+            fieldMetas.Add(parser.Parse(p, attr!, groupAttr, gridAttr));
         }
 
         return fieldMetas;
     }
 
-    public CollectionMeta? Get(string slug)
-    {
-        return _collections.TryGetValue(slug, out var meta) ? meta : null;
-    }
+    public CollectionMeta? Get(string slug) =>
+        _collections.TryGetValue(slug, out var meta) ? meta : null;
 
     public IReadOnlyList<CollectionMeta> GetAll() =>
         _collections.Values.Where(c => !c.IsSingle).ToList().AsReadOnly();
@@ -224,87 +129,15 @@ public sealed class CollectionRegistry
             .Distinct()
             .ToList()
             .AsReadOnly();
-    
-    private static FieldMeta CreateFieldMeta(
-        PropertyInfo p,
-        CrabshellFieldAttribute attr,
-        FieldGroupAttribute? groupAttr,
-        GridOptionsAttribute? gridAttr,
-        (Func<object, object?> getter, Action<object, object?> setter) accessors,
-        Func<string?, object?> parser,
-        FieldType fieldType = FieldType.Text,
-        TextFieldSettings? textSettings = null,
-        SelectFieldSettings? selectSettings = null,
-        RelationshipFieldSettings? relationshipSettings = null,
-        BoolFieldSettings? boolSettings = null,
-        DateTimeFieldSettings? dateTimeSettings = null,
-        NumberFieldSettings? numberSettings = null,
-        MediaFieldSettings? mediaSettings = null) => new()
-    {
-        PropertyName = p.Name,
-        ColumnName = ToSnakeCase(p.Name),
-        Label = attr.Label ?? p.Name,
-        Required = attr.Required,
-        DefaultValue = attr.DefaultValue is null ? null : parser(attr.DefaultValue),
-        ClrType = p.PropertyType,
-        FieldType = fieldType,
-        TextSettings = textSettings,
-        SelectSettings = selectSettings,
-        RelationshipSettings = relationshipSettings,
-        BoolSettings = boolSettings,
-        DateTimeSettings = dateTimeSettings,
-        NumberSettings = numberSettings,
-        MediaSettings = mediaSettings,
-        GroupSettings = groupAttr is null ? null : new FieldGroupSettings { Name = groupAttr.Name, Sidebar = groupAttr.Sidebar },
-        Getter = accessors.getter,
-        Setter = accessors.setter,
-        GridVisible = gridAttr?.Visible ?? true,
-        GridSortable = gridAttr?.Sortable ?? true,
-        GridFilterable = gridAttr?.Filterable ?? false,
-        GridWidth = gridAttr?.Width ?? 0,
-        GridOrder = gridAttr?.Order ?? 0,
-        FormValueParser = parser,
-    };
 
-    private static string ToSnakeCase(string name) =>
-        Regex.Replace(name, @"([a-z0-9])([A-Z])|([A-Z]+)([A-Z][a-z])", "$1$3_$2$4").ToLowerInvariant()
-            .ToLowerInvariant();
-    
-    private static (Func<object, object?> getter, Action<object, object?> setter) BuildAccessors(
-        PropertyInfo property)
-    {
-        // getter
-        var getParam = Expression.Parameter(typeof(object), "obj");
-        var getCast = Expression.Convert(getParam, property.DeclaringType!);
-        var getProp = Expression.Property(getCast, property);
-        var getConvert = Expression.Convert(getProp, typeof(object));
-        var getter = Expression.Lambda<Func<object, object?>>(getConvert, getParam).Compile();
-
-        // setter
-        var setParam = Expression.Parameter(typeof(object), "obj");
-        var setVal = Expression.Parameter(typeof(object), "val");
-        var setCast = Expression.Convert(setParam, property.DeclaringType!);
-        var setProp = Expression.Property(setCast, property);
-        var setConvert = Expression.Convert(setVal, property.PropertyType);
-        var assign = Expression.Assign(setProp, setConvert);
-        var setter = Expression.Lambda<Action<object, object?>>(assign, setParam, setVal).Compile();
-
-        return (getter, setter);
-    }
-    
     private static List<Type> ValidateHookTypes(Type[] types, string collectionTypeName, Type documentType)
     {
-        var beforeDef = typeof(IBeforeSaveHook<>);
-        var afterDef  = typeof(IAfterSaveHook<>);
-        var beforeIface = beforeDef.MakeGenericType(documentType);
-        var afterIface  = afterDef.MakeGenericType(documentType);
+        var beforeIface = typeof(IBeforeSaveHook<>).MakeGenericType(documentType);
+        var afterIface  = typeof(IAfterSaveHook<>).MakeGenericType(documentType);
 
         foreach (var hookType in types)
         {
-            var implementsBefore = beforeIface.IsAssignableFrom(hookType);
-            var implementsAfter  = afterIface.IsAssignableFrom(hookType);
-
-            if (!implementsBefore && !implementsAfter)
+            if (!beforeIface.IsAssignableFrom(hookType) && !afterIface.IsAssignableFrom(hookType))
                 throw new InvalidOperationException(
                     $"'{hookType.Name}' on '{collectionTypeName}' must implement " +
                     $"IBeforeSaveHook<{documentType.Name}> or IAfterSaveHook<{documentType.Name}>.");
@@ -340,7 +173,7 @@ public sealed class CollectionRegistry
 
         return actions;
     }
-    
+
     private static List<IBulkAction> BuildBulkActions(Type[] types, string collectionTypeName)
     {
         var actions = new List<IBulkAction>();
@@ -355,12 +188,9 @@ public sealed class CollectionRegistry
                 throw new InvalidOperationException(
                     $"'{actionType.Name}' on '{collectionTypeName}' must have a public parameterless constructor.");
 
-            var instance = (IBulkAction)Activator.CreateInstance(actionType)!;
-
-            actions.Add(instance);
+            actions.Add((IBulkAction)Activator.CreateInstance(actionType)!);
         }
 
         return actions;
     }
-
 }
